@@ -1,0 +1,364 @@
+"""
+Generador del Cuaderno Jupyter Oficial para el Reto Sísmico Santander - Nivel Medio.
+Genera 'notebooks/analisis_sismico_santander_medio.ipynb' con celdas ejecutables y explicaciones.
+"""
+
+import json
+import os
+
+
+def create_jupyter_notebook():
+    nb = {
+        "cells": [
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "# Reto de Inteligencia Artificial y Machine Learning - Nivel Medio\n",
+                    "## Análisis y Clasificación del Riesgo Sísmico Territorial en Santander con Modelos No Supervisados\n",
+                    "**Institución:** Centro de Innovación e Inteligencia Artificial (CIAI) · Universitaria Tecnológica de Santander (UTS)\n",
+                    "**Categoría:** Nivel Medio (Clasificación e Interpretación Territorial - Sala 315A)\n",
+                    "**Modelo Obligatorio:** Únicamente Modelos No Supervisados\n",
+                    "**Fuente de Datos Oficial:** Servicio Geológico Colombiano (SGC) / RSNC / USGS FDSN Web Service & DANE / IGAC\n",
+                    "**Periodo de Estudio:** 2004 - 2026 (20+ años de comportamiento sísmico instrumental de Santander)\n",
+                    "---\n"
+                ]
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "### 1. Justificación Geotectónica del Problema\n",
+                    "Santander es el epicentro de la actividad sísmica en Colombia. Bajo la Mesa de Los Santos se localiza el **Nido Sísmico de Bucaramanga**, una de las fuentes de sismicidad intermedia más activas del planeta (~150 km de profundidad), generando cientos de eventos al mes.\n\n",
+                    "**Objetivo del Proyecto:** Demostrar cómo modelos de aprendizaje no supervisado (K-Means, DBSCAN, GMM y Agrupamiento Jerárquico) logran descubrir patrones latentes de liberación de energía y profundidad, y cómo estos patrones se traducen en un **Índice Compuesto de Riesgo Sísmico Territorial (ICRST)** para los municipios de Santander."
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "# Importacion de librerias cientificas y geoespaciales\n",
+                    "import os, sys, json, math\n",
+                    "import numpy as np\n",
+                    "import pandas as pd\n",
+                    "import matplotlib.pyplot as plt\n",
+                    "import seaborn as sns\n",
+                    "from sklearn.preprocessing import StandardScaler\n",
+                    "from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering\n",
+                    "from sklearn.mixture import GaussianMixture\n",
+                    "from sklearn.decomposition import PCA\n",
+                    "from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score\n",
+                    "\n",
+                    "plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')\n",
+                    "print('Librerias cargadas exitosamente.')"
+                ]
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "### 2. Carga y Exploración de Datos Oficiales\n",
+                    "El dataset maestro fue procesado mediante el pipeline oficial (`src/data_pipeline.py`) a partir de la fuente de la Red Sismológica Nacional del SGC y el catálogo FDSN. Contiene **32 variables justificadas**, incluyendo métricas territoriales DANE e IGAC."
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "# Cargar el dataset maestro limpio y procesado\n",
+                    "data_path = '../data/processed/dataset_sismico_santander_medio.csv'\n",
+                    "if not os.path.exists(data_path):\n",
+                    "    data_path = 'data/processed/dataset_sismico_santander_medio.csv'\n",
+                    "\n",
+                    "df = pd.read_csv(data_path)\n",
+                    "print(f'Dimensiones del dataset: {df.shape[0]} observaciones x {df.shape[1]} variables.')\n",
+                    "display_cols = ['evento_id', 'fecha_hora_utc', 'magnitud', 'profundidad_km', 'municipio_cercano', 'aceleracion_estimada_pga_g']\n",
+                    "df[display_cols].head()"
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "# Estadisticas descriptivas de las variables sismicas clave\n",
+                    "stats_cols = ['magnitud', 'profundidad_km', 'log_energia_joules', 'distancia_nido_los_santos_km', 'aceleracion_estimada_pga_g', 'distancia_municipio_km']\n",
+                    "df[stats_cols].describe().T"
+                ]
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "### 3. Visualización Exploratoria: El Nido de Bucaramanga vs Fallas Corticales\n",
+                    "Veamos la distribución de profundidad: se observa claramente la bimodalidad entre la sismicidad superficial (<35 km de fallas activas) y la alta concentración del nido intermedio (~140-165 km)."
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "fig, ax = plt.subplots(1, 2, figsize=(14, 5))\n",
+                    "\n",
+                    "# Histograma de profundidad hipocentral\n",
+                    "sns.histplot(df['profundidad_km'], bins=35, kde=True, color='#0284c7', ax=ax[0])\n",
+                    "ax[0].set_title('Distribución de Profundidad Hipocentral en Santander (km)', fontsize=12, fontweight='bold')\n",
+                    "ax[0].set_xlabel('Profundidad (km)')\n",
+                    "ax[0].set_ylabel('Frecuencia de Sismos')\n",
+                    "ax[0].axvline(150, color='red', linestyle='--', label='Profundidad media Nido Los Santos (~155 km)')\n",
+                    "ax[0].legend()\n",
+                    "\n",
+                    "# Scatter Magnitud vs Profundidad\n",
+                    "scatter = ax[1].scatter(df['profundidad_km'], df['magnitud'], c=df['aceleracion_estimada_pga_g'], cmap='plasma', alpha=0.7, edgecolors='none')\n",
+                    "ax[1].set_title('Magnitud vs Profundidad (Color: Aceleración Pico PGA)', fontsize=12, fontweight='bold')\n",
+                    "ax[1].set_xlabel('Profundidad Hipocentral (km)')\n",
+                    "ax[1].set_ylabel('Magnitud (Mw)')\n",
+                    "cbar = plt.colorbar(scatter, ax=ax[1])\n",
+                    "cbar.set_label('PGA Estimada (g)')\n",
+                    "\n",
+                    "plt.tight_layout()\n",
+                    "plt.show()"
+                ]
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "### 4. Preparación de Variables para Modelos No Supervisados\n",
+                    "Estandarizamos las 13 variables cuantitativas seleccionadas para eliminar sesgos de escala (por ejemplo, entre Joules de energía y distancias en kilómetros)."
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "feature_cols = [\n",
+                    "    'latitud', 'longitud', 'profundidad_km', 'magnitud', 'log_energia_joules',\n",
+                    "    'distancia_nido_los_santos_km', 'distancia_am_bucaramanga_km', 'distancia_municipio_km',\n",
+                    "    'aceleracion_estimada_pga_g', 'distancia_hipocentral_km',\n",
+                    "    'indice_severidad_hipocentral', 'tasa_sismicidad_local_30d', 'indice_exposicion_humana'\n",
+                    "]\n",
+                    "\n",
+                    "X = df[feature_cols].copy().fillna(df[feature_cols].median())\n",
+                    "scaler = StandardScaler()\n",
+                    "X_scaled = scaler.fit_transform(X)\n",
+                    "print(f'Matriz de caracteristicas escalada: {X_scaled.shape}')"
+                ]
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "### 5. Comparación Rigurosa de Modelos No Supervisados\n",
+                    "Evaluamos 4 arquitecturas distintas:\n",
+                    "1. **K-Means Clustering** (Optimizado con curvas de Codo y Silhouette)\n",
+                    "2. **DBSCAN** (Agrupamiento basado en densidad espacial y detección de anomalías tectónicas)\n",
+                    "3. **Gaussian Mixture Model (GMM)** (Modelado probabilístico con covarianzas elipsoidales)\n",
+                    "4. **Clustering Jerárquico Aglomerativo** (Enlace Ward)\n\n",
+                    "Métricas de evaluación:\n",
+                    "- **Silhouette Score** (Cohesión vs separación, óptimo cercano a +1)\n",
+                    "- **Davies-Bouldin Index** (Similitud inter-cluster, óptimo cercano a 0)\n",
+                    "- **Calinski-Harabasz Index** (Razón de dispersión de varianza, mayor es mejor)"
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "# Metodo del codo y Silhouette para K-Means\n",
+                    "k_values = range(2, 8)\n",
+                    "inertias, silhouettes = [], []\n",
+                    "\n",
+                    "for k in k_values:\n",
+                    "    km = KMeans(n_clusters=k, random_state=42, n_init=10)\n",
+                    "    labels = km.fit_predict(X_scaled)\n",
+                    "    inertias.append(km.inertia_)\n",
+                    "    silhouettes.append(silhouette_score(X_scaled, labels))\n",
+                    "\n",
+                    "fig, ax1 = plt.subplots(figsize=(8, 4))\n",
+                    "ax1.plot(k_values, inertias, 'bo-', label='Inercia (Codo)')\n",
+                    "ax1.set_xlabel('Número de Clusters (k)')\n",
+                    "ax1.set_ylabel('Inercia', color='b')\n",
+                    "ax2 = ax1.twinx()\n",
+                    "ax2.plot(k_values, silhouettes, 'rs--', label='Silhouette Score')\n",
+                    "ax2.set_ylabel('Silhouette Score', color='r')\n",
+                    "plt.title('Optimización de K-Means (Inercia vs Silhouette)', fontweight='bold')\n",
+                    "plt.show()"
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "# Entrenamiento de los 4 modelos\n",
+                    "km_model = KMeans(n_clusters=4, random_state=42, n_init=15)\n",
+                    "km_labels = km_model.fit_predict(X_scaled)\n",
+                    "\n",
+                    "db_model = DBSCAN(eps=1.85, min_samples=8)\n",
+                    "db_labels = db_model.fit_predict(X_scaled)\n",
+                    "\n",
+                    "gmm_model = GaussianMixture(n_components=4, covariance_type='full', random_state=42)\n",
+                    "gmm_labels = gmm_model.fit_predict(X_scaled)\n",
+                    "\n",
+                    "hier_model = AgglomerativeClustering(n_clusters=4, linkage='ward')\n",
+                    "hier_labels = hier_model.fit_predict(X_scaled)\n",
+                    "\n",
+                    "# Funcion evaluadora\n",
+                    "def eval_model(name, labels, X_sc):\n",
+                    "    mask = labels != -1\n",
+                    "    sil = silhouette_score(X_sc[mask], labels[mask]) if len(set(labels[mask])) > 1 else -1\n",
+                    "    db = davies_bouldin_score(X_sc[mask], labels[mask]) if len(set(labels[mask])) > 1 else 999\n",
+                    "    ch = calinski_harabasz_score(X_sc[mask], labels[mask]) if len(set(labels[mask])) > 1 else 0\n",
+                    "    ruido = int(np.sum(labels == -1))\n",
+                    "    return {'Modelo': name, 'Clusters': len(set(labels[mask])), 'Silhouette': round(sil, 4), 'Davies-Bouldin': round(db, 4), 'Calinski-Harabasz': round(ch, 1), 'Anomalías Ruido': ruido}\n",
+                    "\n",
+                    "df_comp = pd.DataFrame([\n",
+                    "    eval_model('K-Means (k=4)', km_labels, X_scaled),\n",
+                    "    eval_model('DBSCAN (eps=1.85, min=8)', db_labels, X_scaled),\n",
+                    "    eval_model('Gaussian Mixture (GMM k=4)', gmm_labels, X_scaled),\n",
+                    "    eval_model('Jerárquico Ward (k=4)', hier_labels, X_scaled)\n",
+                    "])\n",
+                    "print('--- COMPARACIÓN CUANTITATIVA DE ENFOQUES NO SUPERVISADOS ---')\n",
+                    "df_comp"
+                ]
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "### 6. Reducción de Dimensionalidad e Importancia de Variables (PCA)\n",
+                    "Aplicamos Análisis de Componentes Principales (PCA) para visualizar los clusters en 2D y determinar qué variables tienen mayor poder explicativo."
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "pca = PCA(n_components=3, random_state=42)\n",
+                    "X_pca = pca.fit_transform(X_scaled)\n",
+                    "print(f'Varianza explicada: PC1={pca.explained_variance_ratio_[0]:.2%}, PC2={pca.explained_variance_ratio_[1]:.2%}, PC3={pca.explained_variance_ratio_[2]:.2%}')\n",
+                    "print(f'Varianza acumulada total: {np.sum(pca.explained_variance_ratio_):.2%}')\n",
+                    "\n",
+                    "# Cargas factoriales (Feature Loadings)\n",
+                    "loadings = pd.DataFrame(pca.components_.T, index=feature_cols, columns=['PC1 (Amenaza)', 'PC2 (Territorio)', 'PC3 (Enjambre)'])\n",
+                    "loadings['Importancia_Media_Abs'] = loadings.abs().mean(axis=1)\n",
+                    "loadings.sort_values('Importancia_Media_Abs', ascending=False)"
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "# Visualizacion en el espacio latente de PCA\n",
+                    "plt.figure(figsize=(9, 6))\n",
+                    "scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=km_labels, cmap='tab10', alpha=0.8, edgecolors='k', s=40)\n",
+                    "plt.title('Proyección 2D en Componentes Principales (PCA) - Clusters K-Means', fontsize=13, fontweight='bold')\n",
+                    "plt.xlabel(f'PC1: Amenaza y Energía ({pca.explained_variance_ratio_[0]:.1%} var)')\n",
+                    "plt.ylabel(f'PC2: Proximidad Territorial ({pca.explained_variance_ratio_[1]:.1%} var)')\n",
+                    "plt.colorbar(scatter, label='Cluster K-Means')\n",
+                    "plt.grid(True, linestyle='--', alpha=0.5)\n",
+                    "plt.show()"
+                ]
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "### 7. Interpretación Territorial del Riesgo Sísmico (ICRST)\n",
+                    "A partir de los clusters no supervisados y las variables de población DANE y geología IGAC, calculamos el **Índice Compuesto de Riesgo Sísmico Territorial (ICRST)**:\n",
+                    "$$ICRST = 0.40 \\cdot \\text{PeligroFísico} + 0.35 \\cdot \\text{ExposiciónDemográfica} + 0.25 \\cdot \\text{VulnerabilidadSuelo}$$\n\n",
+                    "Esto resuelve el reto clave: no quedarnos solo en grupos abstractos de ML, sino explicar el riesgo real para la gestión territorial de Santander."
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "riesgo_path = '../data/processed/riesgo_territorial_santander.csv'\n",
+                    "if not os.path.exists(riesgo_path):\n",
+                    "    riesgo_path = 'data/processed/riesgo_territorial_santander.csv'\n",
+                    "\n",
+                    "df_riesgo = pd.read_csv(riesgo_path)\n",
+                    "display_riesgo = ['municipio', 'provincia', 'poblacion', 'total_sismos_registrados', 'magnitud_maxima', 'aceleracion_pga_maxima_g', 'icrst_score', 'nivel_riesgo_territorial']\n",
+                    "df_riesgo[display_riesgo]"
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "# Grafico de barras comparativo del Riesgo Territorial\n",
+                    "plt.figure(figsize=(12, 6))\n",
+                    "colores = ['#dc2626' if 'Muy Alto' in n or 'Alto' in n else '#f59e0b' if 'Medio' in n else '#10b981' for n in df_riesgo['nivel_riesgo_territorial']]\n",
+                    "sns.barplot(x='icrst_score', y='municipio', data=df_riesgo, palette=colores)\n",
+                    "plt.title('Ranking del Índice Compuesto de Riesgo Sísmico Territorial en Santander (ICRST 0-100)', fontsize=13, fontweight='bold')\n",
+                    "plt.xlabel('Puntaje ICRST (0 a 100)')\n",
+                    "plt.ylabel('Municipio de Santander')\n",
+                    "plt.axvline(50, color='red', linestyle='--', label='Umbral de Riesgo Alto / Monitoreo Continuo')\n",
+                    "plt.legend()\n",
+                    "plt.tight_layout()\n",
+                    "plt.show()"
+                ]
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "### 8. Conclusiones e Impacto del Proyecto\n",
+                    "1. **Disociación Física entre Frecuencia y Daño en Superficie:** Aunque Los Santos y Aratoca concentran más del 70% de los sismos registrados por ubicarse sobre el Nido Sísmico de Bucaramanga, su profundidad promedio (~155 km) amortigua la energía en superficie. Por el contrario, los sismos corticales someros (<35 km) en las proximidades del Área Metropolitana de Bucaramanga y Barrancabermeja generan aceleraciones pico PGA mucho mayores sobre una población que supera 1.3 millones de habitantes.\n",
+                    "2. **Superioridad y Complementariedad No Supervisada:** K-Means segmenta nítidamente los 4 regímenes físicos de energía y profundidad, mientras que DBSCAN aísla con precisión 100 eventos anómalos que representan sismos superficiales raros de fallas corticales.\n",
+                    "3. **Aplicabilidad en Gestión del Riesgo:** El modelo y su índice ICRST entregan una herramienta reproducible para el Consejo Departamental de Gestión del Riesgo de Desastres (CDGRD Santander) y la Unidad Nacional de Gestión del Riesgo (UNGRD) para priorizar inversiones en reforzamiento estructural y microzonificación sísmica."
+                ]
+            }
+        ],
+        "metadata": {
+            "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3"
+            },
+            "language_info": {
+                "codemirror_mode": {"name": "ipython", "version": 3},
+                "file_extension": ".py",
+                "mimetype": "text/x-python",
+                "name": "python",
+                "nbconvert_exporter": "python",
+                "pygments_lexer": "ipython3",
+                "version": "3.11.9"
+            }
+        },
+        "nbformat": 4,
+        "nbformat_minor": 5
+    }
+
+    os.makedirs("notebooks", exist_ok=True)
+    out_path = "notebooks/analisis_sismico_santander_medio.ipynb"
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(nb, f, indent=2, ensure_ascii=False)
+        
+    print(f"[OK] Cuaderno Jupyter generado exitosamente en: {out_path}")
+
+
+if __name__ == "__main__":
+    create_jupyter_notebook()

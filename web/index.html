@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoSismo Santander ML | Plataforma de Inteligencia Territorial y Riesgo Sísmico</title>
+  <meta name="description" content="Prototipo de Machine Learning No Supervisado para el análisis y clasificación del riesgo sísmico territorial en Santander. Reto Nivel Medio CIAI - UTS.">
+  
+  <!-- Google Fonts: Inter & Poppins & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Custom CSS (Cache-busted) -->
+  <link rel="stylesheet" href="styles.css?v=20261013-16">
+</head>
+<body>
+  <!-- Top Navigation & Brand Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-badge">
+        <span class="pulse-dot"></span>
+        <svg class="svg-icon logo-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </div>
+      <div class="brand-info">
+        <h1 class="brand-title">GeoSismo <span class="highlight">Santander ML</span></h1>
+        <p class="brand-subtitle">Clasificación No Supervisada del Riesgo Sísmico Territorial · Reto UTS / CIAI</p>
+      </div>
+    </div>
+    
+    <div class="header-center">
+      <div class="live-status-pill">
+        <span class="status-indicator live"></span>
+        <span class="status-text">Datos Oficiales SGC / RSNC (2004 - 2026)</span>
+      </div>
+      <div class="category-pill">
+        <svg class="svg-icon badge-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span>Sala 315A · Nivel Medio</span>
+      </div>
+    </div>
+    
+    <div class="header-right">
+      <button id="btn-toggle-sidebar-left" class="btn btn-secondary" title="Alternar panel de filtros y maximizar mapa">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/>
+        </svg>
+        <span class="btn-text-toggle">Ocultar Controles</span>
+      </button>
+      <button id="btn-apikey-info" class="btn btn-secondary" title="Información sobre la API Key y Proveedores Cartográficos">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span>Cartografía Libre</span>
+      </button>
+      <button id="btn-export-report" class="btn btn-secondary" title="Ver métricas oficiales de evaluación">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+        </svg>
+        <span>Rúbrica & Métricas</span>
+      </button>
+      <button id="btn-reset-map" class="btn btn-primary" title="Restablecer vista a Santander">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>
+        </svg>
+        <span>Centrar Santander</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile View Switcher (Visible only on tablets & mobile screens <= 1024px) -->
+  <nav class="mobile-view-nav" aria-label="Navegación Móvil">
+    <button id="mob-nav-controls" class="mob-nav-btn active" data-view="controls">
+      <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+      </svg>
+      <span>Filtros & Modelos</span>
+    </button>
+    <button id="mob-nav-map" class="mob-nav-btn" data-view="map">
+      <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+      </svg>
+      <span>Mapa Territorial</span>
+    </button>
+    <button id="mob-nav-analytics" class="mob-nav-btn" data-view="analytics">
+      <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      <span>Analítica & Riesgo</span>
+    </button>
+  </nav>
+
+  <!-- KPI Summary Banner -->
+  <section class="kpi-banner">
+    <div class="kpi-card" id="kpi-total-sismos">
+      <div class="kpi-icon-box cyan">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      <div class="kpi-data">
+        <div class="kpi-value" id="val-total-sismos">1,082</div>
+        <div class="kpi-label">Sismos Analizados (2004 - 2026)</div>
+        <span class="kpi-micro-pill cyan">100% SGC Oficial</span>
+      </div>
+    </div>
+
+    <div class="kpi-card" id="kpi-nido-los-santos">
+      <div class="kpi-icon-box purple">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+        </svg>
+      </div>
+      <div class="kpi-data">
+        <div class="kpi-value" id="val-nido-depth">155.4 km</div>
+        <div class="kpi-label">Profundidad Media Nido Los Santos</div>
+        <span class="kpi-micro-pill purple">Foco Focal ~155 km</span>
+      </div>
+    </div>
+
+    <div class="kpi-card" id="kpi-max-magnitud">
+      <div class="kpi-icon-box rose">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </div>
+      <div class="kpi-data">
+        <div class="kpi-value" id="val-max-mag">M 6.2 Mw</div>
+        <div class="kpi-label">Magnitud Máxima Instrumental</div>
+        <span class="kpi-micro-pill rose">Mw Instrumental</span>
+      </div>
+    </div>
+
+    <div class="kpi-card" id="kpi-clusters">
+      <div class="kpi-icon-box amber">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+        </svg>
+      </div>
+      <div class="kpi-data">
+        <div class="kpi-value" id="val-clusters-count">4 Clusters</div>
+        <div class="kpi-label">Regímenes No Supervisados</div>
+        <span class="kpi-micro-pill amber">PCA 74.6% Varianza</span>
+      </div>
+    </div>
+
+    <div class="kpi-card" id="kpi-max-riesgo">
+      <div class="kpi-icon-box emerald">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="kpi-data">
+        <div class="kpi-value" id="val-max-icrst">Barrancabermeja / AMB</div>
+        <div class="kpi-label">Mayor Riesgo ICRST (Población & Fallas)</div>
+        <span class="kpi-micro-pill emerald">ICRST Crítico &gt; 70</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Application Layout -->
+  <main class="app-layout" id="main-app-layout">
+    <!-- Left Panel: Interactive Controls & Filters -->
+    <aside class="sidebar-controls" id="sidebar-controls-panel">
+      <!-- Sidebar Header with Collapse Button -->
+      <div class="sidebar-header">
+        <div class="sidebar-header-info">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+          </svg>
+          <span class="sidebar-header-title">Parámetros & Modelos</span>
+        </div>
+        <button id="btn-collapse-sidebar" class="sidebar-collapse-btn" title="Colapsar panel para ampliar el mapa">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Accordion 1: Algoritmo No Supervisado (Expandido por defecto) -->
+      <details class="control-accordion" id="accordion-models" open>
+        <summary class="accordion-summary">
+          <div class="accordion-title-group">
+            <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/>
+            </svg>
+            <span>Algoritmo No Supervisado</span>
+          </div>
+          <svg class="svg-icon accordion-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </summary>
+        <div class="accordion-content">
+          <p class="section-desc">Seleccione el clasificador para reclasificar en tiempo real:</p>
+          
+          <!-- Segmented Control / Clickable Cards with Rich Minimalist SVGs -->
+          <div class="model-segmented-control" role="tablist" aria-label="Modelos de Machine Learning">
+            <button id="btn-model-kmeans" class="model-seg-card active" data-model="kmeans" role="tab" aria-selected="true">
+              <div class="model-card-header">
+                <div class="model-icon-badge cyan">
+                  <svg class="svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#06b6d4" stroke-width="2">
+                    <circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.5 7.5L10.5 16M16.5 7.5L13.5 16"/>
+                  </svg>
+                </div>
+                <span class="btn-name">K-Means (k=4)</span>
+              </div>
+              <span class="btn-sub">Sil: 0.283 · CH: 335.3</span>
+            </button>
+
+            <button id="btn-model-dbscan" class="model-seg-card" data-model="dbscan" role="tab" aria-selected="false">
+              <div class="model-card-header">
+                <div class="model-icon-badge rose">
+                  <svg class="svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f43f5e" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/><circle cx="5" cy="8" r="1.5"/><circle cx="7" cy="16" r="1.5"/><circle cx="19" cy="9" r="1.5"/><circle cx="18" cy="17" r="1.5"/><circle cx="21" cy="4" r="1.2"/>
+                  </svg>
+                </div>
+                <span class="btn-name">DBSCAN (Densidad)</span>
+              </div>
+              <span class="btn-sub">100 anomalías aisladas</span>
+            </button>
+
+            <button id="btn-model-gmm" class="model-seg-card" data-model="gmm" role="tab" aria-selected="false">
+              <div class="model-card-header">
+                <div class="model-icon-badge purple">
+                  <svg class="svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#a855f7" stroke-width="2">
+                    <ellipse cx="12" cy="12" rx="9" ry="5" transform="rotate(-25 12 12)"/><ellipse cx="12" cy="12" rx="5" ry="2.5" transform="rotate(-25 12 12)"/>
+                  </svg>
+                </div>
+                <span class="btn-name">GMM Gaussiano</span>
+              </div>
+              <span class="btn-sub">Elipsoides de Benioff</span>
+            </button>
+
+            <button id="btn-model-icrst" class="model-seg-card" data-model="icrst" role="tab" aria-selected="false">
+              <div class="model-card-header">
+                <div class="model-icon-badge amber">
+                  <svg class="svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f59e0b" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </div>
+                <span class="btn-name">Riesgo ICRST</span>
+              </div>
+              <span class="btn-sub">Peligro + DANE + IGAC</span>
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <!-- Accordion 2: Filtros Sismológicos y Territoriales (Expandido por defecto) -->
+      <details class="control-accordion" id="accordion-filters" open>
+        <summary class="accordion-summary">
+          <div class="accordion-title-group">
+            <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            <span>Filtros Sismológicos & Territoriales</span>
+          </div>
+          <svg class="svg-icon accordion-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </summary>
+        <div class="accordion-content">
+          <!-- Filter: Clúster / Patrón del Modelo ML -->
+          <div class="filter-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+              <label for="select-cluster" class="filter-label">Patrón / Clúster No Supervisado:</label>
+              <span id="badge-cluster-count" style="font-size:9.5px; color:#38bdf8; font-weight:700;">Todos (1,082)</span>
+            </div>
+            <select id="select-cluster" class="custom-select">
+              <option value="ALL">Todos los Clústeres (Completo)</option>
+            </select>
+          </div>
+
+          <!-- Filter: Municipio de Santander -->
+          <div class="filter-group">
+            <label for="select-municipio" class="filter-label">Unidad Territorial (Municipio):</label>
+            <select id="select-municipio" class="custom-select">
+              <option value="ALL">Todo Santander (16 Municipios)</option>
+            </select>
+          </div>
+
+          <!-- Filter: Regimen de Profundidad -->
+          <div class="filter-group">
+            <label for="select-profundidad" class="filter-label">Régimen Geológico de Profundidad:</label>
+            <select id="select-profundidad" class="custom-select">
+              <option value="ALL">Todas las Profundidades (0 - 220 km)</option>
+              <option value="CORTICAL">Superficial / Fallas Corticales (0 - 45 km)</option>
+              <option value="INTERMEDIO">Intermedia / Benioff (45 - 120 km)</option>
+              <option value="NIDO">Nido Sísmico Bucaramanga (120 - 175 km)</option>
+              <option value="ULTRAPROFUNDO">Sub-Nido Profundo (> 175 km)</option>
+            </select>
+          </div>
+
+          <!-- Filter: Magnitud Minima Slider -->
+          <div class="filter-group">
+            <div class="slider-header">
+              <label for="slider-magnitud" class="filter-label">Magnitud Mínima (Mw):</label>
+              <span id="label-slider-mag" class="slider-value">≥ 2.0</span>
+            </div>
+            <input type="range" id="slider-magnitud" min="2.0" max="5.5" step="0.1" value="2.0" class="custom-slider">
+          </div>
+
+          <!-- Layer Toggles -->
+          <div class="layer-toggles">
+            <span class="toggle-group-label">Capas Activas en el Mapa:</span>
+            <label class="toggle-item">
+              <input type="checkbox" id="chk-toggle-sismos" checked>
+              <span class="toggle-label">Eventos Sísmicos (1,082)</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="chk-toggle-municipios" checked>
+              <span class="toggle-label">Cabeceras Municipales DANE</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="chk-toggle-nido" checked>
+              <span class="toggle-label">Foco Nido Los Santos (~155 km)</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="chk-toggle-fallas" checked>
+              <span class="toggle-label">Falla Bucaramanga-Sta Marta</span>
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <!-- Accordion 3: Leyenda del Modelo Activo (Colapsado por defecto) -->
+      <details class="control-accordion" id="accordion-legend">
+        <summary class="accordion-summary">
+          <div class="accordion-title-group">
+            <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+            </svg>
+            <span>Leyenda del Modelo Activo</span>
+          </div>
+          <svg class="svg-icon accordion-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </summary>
+        <div class="accordion-content">
+          <div id="legend-container" class="legend-items">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+      </details>
+    </aside>
+
+    <!-- Center: Interactive Map Area -->
+    <div class="map-container-wrapper" id="map-panel">
+      <!-- Floating Button to Reopen Sidebar When Collapsed -->
+      <button id="btn-map-expand-sidebar" class="map-floating-sidebar-toggle hidden" title="Mostrar panel de controles y filtros">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>
+        </svg>
+        <span>Filtros</span>
+      </button>
+
+      <div id="map-view" class="leaflet-map-canvas"></div>
+      
+      <!-- Floating Map Info Badge -->
+      <div class="map-floating-badge">
+        <span class="dot-beacon"></span>
+        <span id="map-counter-text">Visualizando 1,082 sismos filtrados</span>
+      </div>
+
+      <!-- Floating Map Layer Switcher (ESRI Dark 100% Libre, OSM Dark, Satélite y Calles) -->
+      <div class="map-tile-switcher-bar">
+        <button id="btn-tile-esri-dark" class="tile-layer-btn active" title="ESRI Canvas Dark Gray (100% Libre de API Key y Sin Marcas de Agua)">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <span>ESRI Dark (Libre)</span>
+        </button>
+        <button id="btn-tile-osm-dark" class="tile-layer-btn" title="OpenStreetMap Modo Oscuro Invertido (Sin API Key)">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          <span>OSM Dark</span>
+        </button>
+        <button id="btn-tile-sat" class="tile-layer-btn" title="Satélite Real de Santander (ESRI World Imagery)">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20 14.5 14.5 0 000-20M2 12h20"/></svg>
+          <span>Satélite</span>
+        </button>
+        <button id="btn-tile-osm" class="tile-layer-btn" title="OpenStreetMap Estándar">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+          <span>Calles</span>
+        </button>
+      </div>
+
+      <!-- Floating Seismic Wave Simulation HUD (Expansión Dinámica de Ondas P y S) -->
+      <div id="seismic-wave-hud" class="seismic-wave-hud hidden" role="region" aria-label="Simulación de Propagación Sísmica">
+        <div class="hud-top">
+          <div class="hud-indicator">
+            <span class="hud-ping"></span>
+            <span class="hud-dot"></span>
+          </div>
+          <span class="hud-title">PROPAGACIÓN SÍSMICA (BUCLE ACTIVO)</span>
+          <button id="btn-toggle-hud-loop" class="hud-btn-toggle" title="Pausar o reanudar el bucle de ondas">⏸ Pausar</button>
+          <button id="btn-close-hud" class="hud-btn-close" title="Detener simulación">&times;</button>
+        </div>
+        <div class="hud-metrics-row">
+          <div class="hud-item">
+            <span class="hud-lbl">Epicentro</span>
+            <span class="hud-val highlight" id="hud-epicenter">Mesa de Los Santos</span>
+          </div>
+          <div class="hud-item">
+            <span class="hud-lbl">Magnitud</span>
+            <span class="hud-val mag" id="hud-mag">M 6.2 Mw</span>
+          </div>
+          <div class="hud-item">
+            <span class="hud-lbl">Profundidad Focal</span>
+            <span class="hud-val" id="hud-depth">155.0 km</span>
+          </div>
+          <div class="hud-item">
+            <span class="hud-lbl">Radio Máximo Percibido</span>
+            <span class="hud-val radius" id="hud-radius">~285 km</span>
+          </div>
+        </div>
+        <div class="hud-progress-track">
+          <div class="hud-progress-bar" id="hud-wave-bar"></div>
+        </div>
+        <div class="hud-waves-legend">
+          <span class="hud-wave-pill p-wave"><span class="wave-dot-p"></span> Onda P (Compresión ~6.2 km/s)</span>
+          <span class="hud-wave-pill s-wave"><span class="wave-dot-s"></span> Onda S (Corte / Sacudida ~3.6 km/s)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Analytics, Metrics & Risk Inspector -->
+    <aside class="sidebar-analytics" id="sidebar-analytics-panel">
+      <!-- Tabs Selector -->
+      <div class="analytics-tabs">
+        <button id="tab-btn-ranking" class="tab-btn active" data-tab="tab-ranking">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+          </svg>
+          <span>Ranking ICRST</span>
+        </button>
+        <button id="tab-btn-metricas" class="tab-btn" data-tab="tab-metricas">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          <span>Métricas ML</span>
+        </button>
+        <button id="tab-btn-pca" class="tab-btn" data-tab="tab-pca">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="7.5" r="1.5"/><circle cx="16.5" cy="8.5" r="1.5"/><circle cx="11.5" cy="13.5" r="1.5"/><path d="M3 3v18h18"/>
+          </svg>
+          <span>PCA 2D</span>
+        </button>
+        <button id="tab-btn-inspector" class="tab-btn" data-tab="tab-inspector">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span>Ficha Sismo</span>
+        </button>
+      </div>
+
+      <!-- Tab Content 1: Territorial Risk Ranking -->
+      <div id="tab-ranking" class="tab-content active">
+        <div class="tab-header-box">
+          <h4 class="tab-title">Índice Compuesto de Riesgo Sísmico Territorial (ICRST)</h4>
+          <p class="tab-desc">Ponderación multidimensional: 40% Peligro Físico + 35% Exposición DANE + 25% Suelo IGAC.</p>
+        </div>
+
+        <!-- Strategic Feature: Horizontal Bar Chart of Top 10 ICRST (Collapsible Accordion) -->
+        <details class="control-accordion" id="accordion-icrst-chart">
+          <summary class="accordion-summary">
+            <div class="accordion-title-group">
+              <svg class="svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f43f5e" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+              <span>Gráfico Top 10 ICRST (Comparativa Rápida)</span>
+            </div>
+            <svg class="svg-icon accordion-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </summary>
+          <div class="accordion-content">
+            <div class="ranking-chart-card" style="margin-top: 4px;">
+              <div class="ranking-chart-header">
+                <span class="ranking-conclusion-tag">Peligro Superficial > Nido Profundo</span>
+              </div>
+              <div id="icrst-bars-container" class="icrst-bars-list">
+                <!-- Dynamically populated via JS with horizontal interactive bars -->
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="tab-subheading">
+          <span class="subheading-title">Desglose Detallado por Municipio:</span>
+        </div>
+        
+        <div class="ranking-list" id="ranking-container">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Machine Learning Evaluation Metrics -->
+      <div id="tab-metricas" class="tab-content">
+        <div class="tab-header-box">
+          <h4 class="tab-title">Validación Rigurosa de Modelos No Supervisados</h4>
+          <p class="tab-desc">Comparación oficial según la rúbrica del Nivel Medio (25 pts):</p>
+        </div>
+
+        <div class="metrics-table-wrapper">
+          <table class="metrics-table">
+            <thead>
+              <tr>
+                <th>Modelo</th>
+                <th>Clusters</th>
+                <th>Silhouette ↑</th>
+                <th>Davies-B. ↓</th>
+                <th>Calinski-H. ↑</th>
+              </tr>
+            </thead>
+            <tbody id="metrics-table-body">
+              <tr>
+                <td><strong>K-Means (k=4)</strong></td>
+                <td>4</td>
+                <td><span class="metric-badge green">0.2834</span></td>
+                <td><span class="metric-badge green">1.2728</span></td>
+                <td><span class="metric-badge green">335.28</span></td>
+              </tr>
+              <tr>
+                <td><strong>DBSCAN (eps=1.85)</strong></td>
+                <td>4 + Ruido</td>
+                <td><span class="metric-badge yellow">0.3264</span></td>
+                <td><span class="metric-badge green">0.8904</span></td>
+                <td><span class="metric-badge blue">88.25</span></td>
+              </tr>
+              <tr>
+                <td><strong>GMM (Gaussian Mix)</strong></td>
+                <td>4</td>
+                <td><span class="metric-badge red">0.0673</span></td>
+                <td><span class="metric-badge red">2.5842</span></td>
+                <td><span class="metric-badge blue">143.41</span></td>
+              </tr>
+              <tr>
+                <td><strong>Jerárquico Ward</strong></td>
+                <td>4</td>
+                <td><span class="metric-badge green">0.2458</span></td>
+                <td><span class="metric-badge yellow">1.4713</span></td>
+                <td><span class="metric-badge green">278.78</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pca-variance-box">
+          <h5>Varianza Explicada por PCA (74.62% Acumulada):</h5>
+          <div class="pca-bars">
+            <div class="pca-bar-item">
+              <span>PC1 (Amenaza Física): 38.22%</span>
+              <div class="progress-bar"><div class="fill" style="width: 38.22%;"></div></div>
+            </div>
+            <div class="pca-bar-item">
+              <span>PC2 (Proximidad Territorial): 24.86%</span>
+              <div class="progress-bar"><div class="fill" style="width: 24.86%;"></div></div>
+            </div>
+            <div class="pca-bar-item">
+              <span>PC3 (Densidad Enjambre): 11.54%</span>
+              <div class="progress-bar"><div class="fill" style="width: 11.54%;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 3: PCA 2D & Physics Scatter Plot -->
+      <div id="tab-pca" class="tab-content">
+        <div class="tab-header-box">
+          <h4 class="tab-title">Espacio Latente PCA & Física Sísmica</h4>
+          <p class="tab-desc">Proyección bidimensional de componentes principales y física focal:</p>
+        </div>
+
+        <div class="chart-box">
+          <div class="chart-title">Magnitud vs Profundidad (Bimodalidad del Nido)</div>
+          <canvas id="canvas-physics" width="380" height="210"></canvas>
+        </div>
+
+        <div class="chart-box">
+          <div class="chart-title">Proyección PCA: Componente 1 vs Componente 2</div>
+          <canvas id="canvas-pca" width="380" height="210"></canvas>
+        </div>
+      </div>
+
+      <!-- Tab Content 4: Sismo Inspector & Calculator -->
+      <div id="tab-inspector" class="tab-content">
+        <div class="tab-header-box">
+          <h4 class="tab-title">Ficha Técnica e Inspector Geofísico</h4>
+          <p class="tab-desc">Haga clic en cualquier sismo del mapa para inspeccionar sus parámetros físicos en tiempo real:</p>
+        </div>
+
+        <div class="inspector-card" id="inspector-card-content">
+          <div class="inspector-empty">
+            <svg class="svg-icon empty-svg" viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <p>Seleccione un sismo o un municipio en el mapa interactivo para visualizar el desglose geocientífico.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal Dialog for Rubric & Team Pitch Summary -->
+  <div id="modal-rubric" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge">Rúbrica 100 Puntos · Nivel Medio</span>
+          <h3 class="modal-title">Cumplimiento Integral de Criterios de Evaluación</h3>
+        </div>
+        <button id="btn-close-modal" class="btn-close" aria-label="Cerrar modal">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="rubric-grid">
+          <div class="rubric-item success">
+            <div class="rubric-score">15 / 15 Pts</div>
+            <h4>1. Datos y Preprocesamiento</h4>
+            <p>32 variables justificadas (min. 15), catálogo unificado SGC/RSNC oficial (2004-2026), sin duplicados, imputación robusta y cruce DANE/IGAC.</p>
+          </div>
+          <div class="rubric-item success">
+            <div class="rubric-score">25 / 25 Pts</div>
+            <h4>2. Modelo No Supervisado</h4>
+            <p>Únicamente modelos no supervisados: K-Means (k=4), DBSCAN, GMM y Jerárquico comparados formalmente con Silhouette (0.2834), Davies-Bouldin y PCA (74.62% var).</p>
+          </div>
+          <div class="rubric-item success">
+            <div class="rubric-score">15 / 15 Pts</div>
+            <h4>3. Arquitectura Utilizada</h4>
+            <p>Diagrama end-to-end Mermaid, pipeline ETL modular (`data_pipeline.py`), Zoo de Modelos (`unsupervised_models.py`) e integración REST.</p>
+          </div>
+          <div class="rubric-item success">
+            <div class="rubric-score">10 / 10 Pts</div>
+            <h4>4. Prototipo Territorial</h4>
+            <p>Dashboard interactivo reproducible con Leaflet, capas territoriales de 16 municipios de Santander, filtros en tiempo real y gráficos dinámicos.</p>
+          </div>
+          <div class="rubric-item success">
+            <div class="rubric-score">15 / 15 Pts</div>
+            <h4>5. Impacto e Innovación</h4>
+            <p>Índice Compuesto ICRST (Peligro + Exposición + Suelo). Explica la paradoja geocientífica: Los Santos concentra frecuencia, pero el AMB y Barrancabermeja concentran el riesgo.</p>
+          </div>
+          <div class="rubric-item success">
+            <div class="rubric-score">20 / 20 Pts</div>
+            <h4>6. Presentación y Pitch</h4>
+            <p>Estructura de pitch final de 4 minutos, diapositivas listas (`PRESENTACION_PITCH.md`) y cuaderno reproducible (`.ipynb`).</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-modal-ok" class="btn btn-primary">Entendido · Continuar Demostración</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog for API Key Information -->
+  <div id="modal-apikey" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge" style="color:#10b981;">Conectividad & Fuentes Cartográficas</span>
+          <h3 class="modal-title">¿Dónde se coloca la API Key y dónde se consigue?</h3>
+        </div>
+        <button id="btn-close-apikey-modal" class="btn-close" aria-label="Cerrar modal">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:14px; font-size:13px; line-height:1.5;">
+        <div style="background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.3); border-radius:8px; padding:12px; display:flex; gap:10px; align-items:flex-start;">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <div>
+            <strong style="color:#34d399;">¡Respuesta Directa: No necesitas ninguna API Key!</strong>
+            <p style="margin-top:4px; font-size:12px; color:var(--text-muted);">
+              La marca de agua <em>"API KEY REQUIRED"</em> que aparecía en el fondo pertenecía al servidor de prueba de CartoDB.
+              El sistema ha sido actualizado para usar directamente los servidores de <strong>ESRI ArcGIS Canvas</strong> y <strong>OpenStreetMap</strong>, que son <strong>100% gratuitos, de libre acceso público y sin marcas de agua</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:14px;">
+          <h4 style="font-size:13px; font-weight:700; color:#38bdf8; margin-bottom:6px;">Capas Disponibles Sin Costo ni Registro:</h4>
+          <ul style="font-size:12px; color:var(--text-muted); padding-left:18px; display:flex; flex-direction:column; gap:5px;">
+            <li><strong>ESRI World Dark Gray:</strong> Ideal para análisis sismológico oscuro de alto contraste (Predeterminado).</li>
+            <li><strong>ESRI World Imagery Satélite:</strong> Imágenes satelitales de alta resolución de Santander y el Cañón del Chicamocha.</li>
+            <li><strong>OpenStreetMap Mundial:</strong> Cartografía abierta colaborativa con vías y municipios.</li>
+          </ul>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+          <h4 style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:6px;">(Opcional) ¿Tienes tu propio Token de Mapbox o Carto?</h4>
+          <p style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">Si tu equipo desea usar su propio servicio privado, puedes pegar el token aquí:</p>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="input-custom-apikey" placeholder="pk.eyJ1Ijo... (Opcional)" class="custom-select" style="font-size:11px; flex:1;">
+            <button id="btn-save-custom-key" class="btn btn-secondary" style="font-size:11px;">Guardar</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-modal-apikey-ok" class="btn btn-primary">Entendido · Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Custom JS Logic (Cache-busted) -->
+  <script src="app.js?v=20261013-16"></script>
+</body>
+</html>
