@@ -472,23 +472,7 @@ function initUIEventListeners() {
 
   mobNavBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      mobNavBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const view = btn.dataset.view; // 'controls', 'map', 'analytics'
-      
-      if (mainLayout) {
-        mainLayout.classList.remove('view-controls', 'view-map', 'view-analytics');
-        mainLayout.classList.add(`view-${view}`);
-      }
-      
-      if (view === 'map' && state.map) {
-        setTimeout(() => {
-          state.map.invalidateSize();
-        }, 150);
-      } else if (view === 'analytics') {
-        renderCharts();
-        renderIcrstBarChart();
-      }
+      setMobileView(btn.dataset.view);
     });
   });
 
@@ -669,7 +653,34 @@ function initUIEventListeners() {
       if (e.target === modal3D) closeThreeJsModal();
     });
   }
+
 }
+
+/**
+ * Alterna entre las vistas de panel en dispositivos móviles y tablets (<= 1024px)
+ * @param {'controls'|'map'|'analytics'} viewName 
+ */
+function setMobileView(viewName) {
+  const mainLayout = document.getElementById('main-app-layout');
+  if (!mainLayout) return;
+
+  mainLayout.classList.remove('view-controls', 'view-map', 'view-analytics');
+  mainLayout.classList.add(`view-${viewName}`);
+
+  document.querySelectorAll('.mob-nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === viewName);
+  });
+
+  if (viewName === 'map' && state.map) {
+    setTimeout(() => {
+      state.map.invalidateSize();
+    }, 180);
+  } else if (viewName === 'analytics') {
+    if (typeof renderCharts === 'function') renderCharts();
+    if (typeof renderIcrstBarChart === 'function') renderIcrstBarChart();
+  }
+}
+window.setMobileView = setMobileView;
 
 /**
  * Aplica los filtros espaciotemporales a los sismos
@@ -1170,6 +1181,31 @@ function renderMunicipiosOnMap() {
     });
 
     const marker = L.marker([m.lat, m.lon], { icon: customIcon });
+
+    const popupHtml = `
+      <div style="font-family: var(--font-main); min-width: 210px; padding: 2px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <b style="font-size:14px; color:#fff;">${m.municipio}</b>
+          <span style="font-size:11px; font-weight:800; color:${badgeColor}; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid ${badgeColor};">${icrst.toFixed(1)} pts</span>
+        </div>
+        <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">
+          ${riesgoItem ? riesgoItem.nivel_riesgo_territorial : 'Santander'} · ${riesgoItem ? riesgoItem.provincia : ''}
+        </div>
+        <div style="font-size:11.5px; color:#e2e8f0; margin-bottom:8px;">
+          Población: <b>${riesgoItem ? Number(riesgoItem.poblacion).toLocaleString() : 'N/A'}</b> hab.
+        </div>
+        <div style="display:flex; gap:6px; flex-direction:column;">
+          <button onclick="inspectMunicipio('${m.municipio}'); if (window.innerWidth <= 1024) setMobileView('analytics');" class="btn btn-secondary" style="font-size:11px; padding:6px 8px; width:100%; justify-content:center; cursor:pointer;">
+            📊 Ver Analítica e Inspector
+          </button>
+          <button onclick="openMunicipalPdfReport('${m.municipio}');" class="btn btn-primary" style="font-size:11px; padding:6px 8px; width:100%; justify-content:center; cursor:pointer;">
+            📄 Ficha Oficial CMGRD
+          </button>
+        </div>
+      </div>
+    `;
+    marker.bindPopup(popupHtml);
+
     marker.on('click', () => {
       inspectMunicipio(m.municipio);
     });
@@ -2488,4 +2524,11 @@ function closeMunicipalPdfReport() {
 function printMunicipalPdf() {
   window.print();
 }
+
+// Exportar globalmente para eventos en HTML / Popups Leaflet
+window.openMunicipalPdfReport = openMunicipalPdfReport;
+window.closeMunicipalPdfReport = closeMunicipalPdfReport;
+window.printMunicipalPdf = printMunicipalPdf;
+window.inspectMunicipio = inspectMunicipio;
+window.inspectSismo = inspectSismo;
 

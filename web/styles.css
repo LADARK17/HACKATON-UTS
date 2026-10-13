@@ -1702,6 +1702,10 @@ canvas {
    RESPONSIVE DESIGN BREAKPOINTS
    ========================================================================== */
 
+/* ==========================================================================
+   RESPONSIVE DESIGN BREAKPOINTS (MOBILE-FIRST NATIVE APP FEEL)
+   ========================================================================== */
+
 /* Tablet & Intermediate Desktops (<= 1200px) */
 @media (max-width: 1200px) {
   .app-layout {
@@ -1712,21 +1716,75 @@ canvas {
   }
 }
 
-/* Tablet Screens (<= 1024px) */
+/* Tablet Screens & Foldables (<= 1024px) */
 @media (max-width: 1024px) {
   body {
     overflow-y: auto;
     height: auto;
   }
 
+  /* Barra de Navegación Móvil Fija en la Parte Inferior (Estilo App Nativa) */
   .mobile-view-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 60px !important;
+    background: rgba(10, 15, 29, 0.96) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(56, 189, 248, 0.3) !important;
+    box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.75) !important;
+    z-index: 1500 !important;
+    padding: 4px 8px !important;
+    padding-bottom: max(4px, env(safe-area-inset-bottom)) !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    margin: 0 !important;
+  }
+
+  .mob-nav-btn {
+    flex: 1;
+    min-width: 0;
+    max-width: 160px;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .mob-nav-btn .svg-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .mob-nav-btn.active {
+    background: rgba(56, 189, 248, 0.14);
+    color: #38bdf8;
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
+  }
+
+  /* Ocultar botón de toggle sidebar escritorio en pantallas móviles */
+  #btn-toggle-sidebar-left {
+    display: none !important;
   }
 
   .app-layout {
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - 180px);
+    min-height: calc(100vh - 120px);
+    margin-bottom: 64px; /* Espacio de reserva para no solapar el bottom nav */
   }
 
   /* Vista en pestañas en tablets/móviles para evitar squeeze */
@@ -1738,37 +1796,83 @@ canvas {
     border: none;
   }
 
-  /* La vista activa se muestra al 100% */
+  /* La vista activa se muestra al 100% de ancho y altura */
   .app-layout.view-controls #sidebar-controls-panel {
     display: flex;
-    overflow-y: visible;
+    overflow-y: auto;
+    padding: 12px;
+    padding-bottom: 80px;
   }
 
   .app-layout.view-map #map-panel {
     display: block;
-    height: 70vh;
-    min-height: 500px;
+    height: calc(100vh - 170px);
+    min-height: 440px;
+    position: relative;
   }
 
   .app-layout.view-analytics #sidebar-analytics-panel {
     display: flex;
-    overflow-y: visible;
+    overflow-y: auto;
+    padding: 12px;
+    padding-bottom: 80px;
   }
 
-  .app-header {
-    padding: 10px 16px;
+  /* KPI Banner como tira deslizable horizontal táctil */
+  .kpi-banner {
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    padding: 6px 12px !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
-  .header-center {
-    order: 3;
-    width: 100%;
-    justify-content: space-between;
-    margin-top: 4px;
+  .kpi-banner::-webkit-scrollbar {
+    display: none !important;
   }
 
-  .map-floating-badge {
-    left: 16px;
-    top: 12px;
+  .kpi-card {
+    flex: 0 0 160px !important;
+    min-width: 160px !important;
+    padding: 6px 10px !important;
+  }
+
+  .kpi-icon-box {
+    width: 32px;
+    height: 32px;
+  }
+
+  .kpi-value {
+    font-size: 13.5px;
+  }
+
+  .kpi-label {
+    font-size: 9.5px;
+  }
+
+  /* Barra de cambio de capas en el mapa flotante sobre el bottom nav */
+  .map-tile-switcher-bar {
+    bottom: 16px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100vw - 20px) !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    padding: 4px 6px !important;
+    gap: 4px !important;
+    scrollbar-width: none !important;
+  }
+
+  .map-tile-switcher-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .tile-layer-btn {
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
   }
 }
 
@@ -1777,54 +1881,324 @@ canvas {
   .app-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 8px;
+    padding: 8px 12px;
   }
 
   .header-left {
-    justify-content: space-between;
+    justify-content: flex-start;
   }
 
-  .header-right {
-    justify-content: space-between;
+  .brand-title {
+    font-size: 16px;
+  }
+
+  .brand-subtitle {
+    font-size: 9.5px;
+    line-height: 1.25;
+  }
+
+  .header-center {
+    display: flex;
     width: 100%;
+    justify-content: space-between;
+    gap: 6px;
+    margin: 0;
   }
 
-  .header-right .btn {
+  .live-status-pill, .category-pill {
+    font-size: 10px;
+    padding: 4px 8px;
     flex: 1;
     justify-content: center;
   }
 
-  .kpi-banner {
-    grid-template-columns: 1fr 1fr;
-    padding: 8px 12px;
+  .header-right {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .rubric-grid {
-    grid-template-columns: 1fr;
+  .header-right::-webkit-scrollbar {
+    display: none;
+  }
+
+  .header-right .btn {
+    flex: 1;
+    min-width: max-content;
+    padding: 6px 10px;
+    font-size: 11px;
+    justify-content: center;
   }
 
   .app-layout.view-map #map-panel {
-    height: 65vh;
-    min-height: 400px;
+    height: calc(100vh - 190px);
+    min-height: 380px;
+  }
+
+  /* Badge contador en mapa compacto */
+  .map-floating-badge {
+    top: 8px !important;
+    left: 8px !important;
+    padding: 3px 8px !important;
+    font-size: 10px !important;
+  }
+
+  /* HUD de simulación de ondas sísmicas compacto en móvil */
+  .seismic-wave-hud {
+    top: 8px !important;
+    left: 8px !important;
+    right: 8px !important;
+    max-width: calc(100vw - 16px) !important;
+    padding: 8px 10px !important;
+  }
+
+  .hud-title {
+    font-size: 10.5px !important;
+  }
+
+  .hud-metrics-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+
+  .hud-lbl {
+    font-size: 8.5px !important;
+  }
+
+  .hud-val {
+    font-size: 11.5px !important;
+  }
+
+  /* Inputs táctiles cómodos que evitan auto-zoom en iOS Safari */
+  .custom-select, select, input[type="text"] {
+    font-size: 15px !important;
+    min-height: 42px !important;
+  }
+
+  /* Pestañas de analítica en 4 columnas */
+  .analytics-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+  }
+
+  .tab-btn {
+    padding: 6px 3px !important;
+    font-size: 9.5px !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    text-align: center !important;
+  }
+
+  .tab-btn span {
+    font-size: 9px !important;
+  }
+
+  /* Inspector de sismo adaptado */
+  .sismo-hero-metrics {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .hero-metric-val {
+    font-size: 1.5rem !important;
+  }
+
+  .sismo-subcards-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+
+  /* ==========================================================================
+     MODALES A PANTALLA COMPLETA EN MÓVILES (NATIVO APP)
+     ========================================================================== */
+  .modal-backdrop {
+    padding: 0 !important;
+  }
+
+  .modal-card {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+
+  /* Modal 3D Isométrico en Móvil */
+  .modal-card-3d {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2500 !important;
+  }
+
+  .view-3d-toolbar {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    padding: 6px 10px !important;
+    scrollbar-width: none !important;
+  }
+
+  .view-3d-toolbar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .toolbar-group {
+    flex-shrink: 0 !important;
+  }
+
+  .hud-3d-overlay {
+    top: 6px !important;
+    left: 6px !important;
+    gap: 4px !important;
+  }
+
+  .hud-stat-pill {
+    font-size: 9.5px !important;
+    padding: 2.5px 7px !important;
+  }
+
+  .depth-3d-legend {
+    bottom: 50px !important;
+    left: 6px !important;
+    right: 6px !important;
+    padding: 6px 8px !important;
+    font-size: 9px !important;
+    max-width: calc(100vw - 12px) !important;
+  }
+
+  .depth-legend-title {
+    font-size: 8.5px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .depth-legend-item {
+    gap: 5px !important;
+  }
+
+  .depth-dot {
+    width: 7px !important;
+    height: 7px !important;
+  }
+
+  .view-3d-footer {
+    padding: 6px 10px !important;
+  }
+
+  .view-3d-info-note {
+    display: none !important; /* Ocultar texto largo de ayuda en móvil */
+  }
+
+  #btn-close-3d-modal-footer {
+    width: 100% !important;
+  }
+
+  /* Modal Ficha Técnica PDF en Móvil */
+  .modal-card-pdf {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2500 !important;
+  }
+
+  .report-paper-wrapper {
+    padding: 8px !important;
+  }
+
+  .report-paper {
+    padding: 14px 10px !important;
+    min-height: auto !important;
+    font-size: 9.5px !important;
+    width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  .doc-hero-section {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+  }
+
+  .doc-score-card {
+    width: 100% !important;
+    padding: 6px !important;
+  }
+
+  .doc-score-val {
+    font-size: 18px !important;
+  }
+
+  .doc-pilares-grid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .doc-pilar-card {
+    padding: 6px 8px !important;
+  }
+
+  .doc-matrix-table {
+    font-size: 7.5px !important;
+  }
+
+  .doc-matrix-table th, .doc-matrix-table td {
+    padding: 3px 4px !important;
+  }
+
+  .doc-signatures-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    margin-top: 12px !important;
+  }
+
+  .doc-sig-box div[style*="height: 28px"] {
+    height: 12px !important;
   }
 }
 
 /* Small Mobile Screens (<= 480px) */
 @media (max-width: 480px) {
-  .kpi-banner {
-    grid-template-columns: 1fr;
+  .brand-title {
+    font-size: 15px;
   }
-  
-  .model-selector-grid {
-    grid-template-columns: 1fr;
+
+  .brand-subtitle {
+    display: none; /* Ahorra valioso espacio vertical en teléfonos pequeños */
+  }
+
+  .header-right .btn span {
+    font-size: 10px;
+  }
+
+  .model-card-header .btn-name {
+    font-size: 12px;
   }
 
   .analytics-tabs {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr) !important;
   }
 
-  .brand-title {
-    font-size: 17px;
+  .tab-btn span {
+    display: none; /* En teléfonos muy pequeños muestra sólo iconos claros para no apretar el texto */
+  }
+
+  .tab-btn .svg-icon {
+    width: 16px;
+    height: 16px;
   }
 }
 
