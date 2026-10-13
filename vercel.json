@@ -1,0 +1,33 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/api/sismos", "destination": "/data/processed/sismos_santander.json" },
+    { "source": "/api/riesgo", "destination": "/data/processed/riesgo_territorial_santander.json" },
+    { "source": "/api/metricas", "destination": "/models/metricas_modelos.json" },
+    { "source": "/api/municipios", "destination": "/data/santander_municipios.json" },
+    { "source": "/", "destination": "/web/index.html" },
+    { "source": "/styles.css", "destination": "/web/styles.css" },
+    { "source": "/app.js", "destination": "/web/app.js" },
+    { "source": "/vendor/:path*", "destination": "/web/vendor/:path*" },
+    { "source": "/web", "destination": "/web/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" },
+        { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=86400" }
+      ]
+    },
+    {
+      "source": "/data/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=86400" }
+      ]
+    }
+  ]
+}

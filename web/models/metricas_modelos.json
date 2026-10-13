@@ -1,0 +1,262 @@
+{
+  "k_selected": 4,
+  "elbow_data": [
+    {
+      "k": 2,
+      "inertia": 10157.17,
+      "silhouette": 0.6647
+    },
+    {
+      "k": 3,
+      "inertia": 8232.38,
+      "silhouette": 0.2514
+    },
+    {
+      "k": 4,
+      "inertia": 7276.61,
+      "silhouette": 0.2834
+    },
+    {
+      "k": 5,
+      "inertia": 6541.67,
+      "silhouette": 0.2574
+    },
+    {
+      "k": 6,
+      "inertia": 5860.75,
+      "silhouette": 0.2712
+    },
+    {
+      "k": 7,
+      "inertia": 5348.83,
+      "silhouette": 0.2766
+    }
+  ],
+  "metricas_comparativas": [
+    {
+      "modelo": "K-Means (k=4)",
+      "n_clusters": 4,
+      "silhouette": 0.2834,
+      "davies_bouldin": 1.2728,
+      "calinski_harabasz": 335.28,
+      "ruido_puntos": 0
+    },
+    {
+      "modelo": "DBSCAN (eps=1.85, min=8)",
+      "n_clusters": 4,
+      "silhouette": 0.3264,
+      "davies_bouldin": 0.8904,
+      "calinski_harabasz": 88.25,
+      "ruido_puntos": 100
+    },
+    {
+      "modelo": "Gaussian Mixture Model (k=4)",
+      "n_clusters": 4,
+      "silhouette": 0.0673,
+      "davies_bouldin": 2.5842,
+      "calinski_harabasz": 143.41,
+      "ruido_puntos": 0
+    },
+    {
+      "modelo": "Jerarquico Ward (k=4)",
+      "n_clusters": 4,
+      "silhouette": 0.2458,
+      "davies_bouldin": 1.4713,
+      "calinski_harabasz": 278.78,
+      "ruido_puntos": 0
+    }
+  ],
+  "varianza_pca": [
+    0.3821799368221185,
+    0.2485943206723605,
+    0.11537933774720699
+  ],
+  "cluster_perfiles": {
+    "0": {
+      "latitud": 6.770730405405405,
+      "longitud": -73.02014358108109,
+      "profundidad_km": 157.65210135135135,
+      "magnitud": 4.444932432432433,
+      "log_energia_joules": 11.467398648648649,
+      "distancia_nido_los_santos_km": 14.421340953950605,
+      "distancia_am_bucaramanga_km": 41.27685667371922,
+      "distancia_municipio_km": 9.494594594594595,
+      "aceleracion_estimada_pga_g": 0.011641891891891892,
+      "distancia_hipocentral_km": 157.99445945945945,
+      "indice_severidad_hipocentral": 9.269344580926925,
+      "tasa_sismicidad_local_30d": 3.3462837837837838,
+      "indice_exposicion_humana": 2.072520378077614
+    },
+    "1": {
+      "latitud": 6.908202272727272,
+      "longitud": -73.80260681818181,
+      "profundidad_km": 74.88313636363637,
+      "magnitud": 4.309090909090909,
+      "log_energia_joules": 11.263636363636364,
+      "distancia_nido_los_santos_km": 116.81233297499226,
+      "distancia_am_bucaramanga_km": 116.37468711180591,
+      "distancia_municipio_km": 55.96068181818182,
+      "aceleracion_estimada_pga_g": 0.022319545454545456,
+      "distancia_hipocentral_km": 100.92863636363636,
+      "indice_severidad_hipocentral": 9.2870566045166,
+      "tasa_sismicidad_local_30d": 0.045454545454545456,
+      "indice_exposicion_humana": 3.041076178056029
+    },
+    "2": {
+      "latitud": 6.739497106109325,
+      "longitud": -72.98702926045017,
+      "profundidad_km": 165.22858199356912,
+      "magnitud": 3.9176848874598065,
+      "log_energia_joules": 10.67652733118971,
+      "distancia_nido_los_santos_km": 20.672999964662765,
+      "distancia_am_bucaramanga_km": 47.145596510440456,
+      "distancia_municipio_km": 11.445176848874597,
+      "aceleracion_estimada_pga_g": 0.007936109324758842,
+      "distancia_hipocentral_km": 165.81064308681673,
+      "indice_severidad_hipocentral": 8.457716962107762,
+      "tasa_sismicidad_local_30d": 4.414790996784566,
+      "indice_exposicion_humana": 1.9359668268507597
+    },
+    "3": {
+      "latitud": 7.032735555555556,
+      "longitud": -73.09584222222223,
+      "profundidad_km": 148.8202888888889,
+      "magnitud": 4.288888888888889,
+      "log_energia_joules": 11.233333333333333,
+      "distancia_nido_los_santos_km": 33.09151450852018,
+      "distancia_am_bucaramanga_km": 30.49867342017885,
+      "distancia_municipio_km": 17.46962962962963,
+      "aceleracion_estimada_pga_g": 0.01126451851851852,
+      "distancia_hipocentral_km": 150.46814814814815,
+      "indice_severidad_hipocentral": 9.058138856776232,
+      "tasa_sismicidad_local_30d": 3.0814814814814815,
+      "indice_exposicion_humana": 3.1675582469036465
+    }
+  },
+  "cluster_names": {
+    "0": {
+      "nombre": "Eventos de Moderada/Alta Magnitud (Liberaci\u00f3n Regional)",
+      "nivel_riesgo": "Riesgo Alto (Perceptible y Alerta Infraestructura)"
+    },
+    "1": {
+      "nombre": "Eventos de Moderada/Alta Magnitud (Liberaci\u00f3n Regional)",
+      "nivel_riesgo": "Riesgo Alto (Perceptible y Alerta Infraestructura)"
+    },
+    "2": {
+      "nombre": "N\u00facleo del Nido S\u00edsmico de Bucaramanga (Intermedio T\u00edpico)",
+      "nivel_riesgo": "Riesgo Moderado (Recurrente, Atenuaci\u00f3n Profunda)"
+    },
+    "3": {
+      "nombre": "Eventos de Moderada/Alta Magnitud (Liberaci\u00f3n Regional)",
+      "nivel_riesgo": "Riesgo Alto (Perceptible y Alerta Infraestructura)"
+    }
+  },
+  "variables_utilizadas": [
+    "latitud",
+    "longitud",
+    "profundidad_km",
+    "magnitud",
+    "log_energia_joules",
+    "distancia_nido_los_santos_km",
+    "distancia_am_bucaramanga_km",
+    "distancia_municipio_km",
+    "aceleracion_estimada_pga_g",
+    "distancia_hipocentral_km",
+    "indice_severidad_hipocentral",
+    "tasa_sismicidad_local_30d",
+    "indice_exposicion_humana"
+  ],
+  "pca_loadings": [
+    {
+      "index": "distancia_am_bucaramanga_km",
+      "PC1_Amenaza_Fisica": -0.24268327035966372,
+      "PC2_Territorio_Proximidad": -0.2654659464299401,
+      "PC3_Densidad_Enjambre": 0.5249247524906019,
+      "Magnitud_Impacto_Abs": 0.3443579897600686
+    },
+    {
+      "index": "distancia_nido_los_santos_km",
+      "PC1_Amenaza_Fisica": -0.3239252656687974,
+      "PC2_Territorio_Proximidad": -0.29200235112310435,
+      "PC3_Densidad_Enjambre": 0.2448529474345893,
+      "Magnitud_Impacto_Abs": 0.2869268547421637
+    },
+    {
+      "index": "magnitud",
+      "PC1_Amenaza_Fisica": -0.19474106070475175,
+      "PC2_Territorio_Proximidad": 0.4765586156917274,
+      "PC3_Densidad_Enjambre": 0.1882109067610329,
+      "Magnitud_Impacto_Abs": 0.2865035277191707
+    },
+    {
+      "index": "log_energia_joules",
+      "PC1_Amenaza_Fisica": -0.19474106070475164,
+      "PC2_Territorio_Proximidad": 0.4765586156917269,
+      "PC3_Densidad_Enjambre": 0.18821090676103266,
+      "Magnitud_Impacto_Abs": 0.2865035277191704
+    },
+    {
+      "index": "indice_severidad_hipocentral",
+      "PC1_Amenaza_Fisica": -0.2326240922186347,
+      "PC2_Territorio_Proximidad": 0.4620514785495651,
+      "PC3_Densidad_Enjambre": 0.1419299300246553,
+      "Magnitud_Impacto_Abs": 0.278868500264285
+    },
+    {
+      "index": "distancia_municipio_km",
+      "PC1_Amenaza_Fisica": -0.31127606608163244,
+      "PC2_Territorio_Proximidad": -0.27869541318627367,
+      "PC3_Densidad_Enjambre": 0.21260130969180527,
+      "Magnitud_Impacto_Abs": 0.26752426298657045
+    },
+    {
+      "index": "distancia_hipocentral_km",
+      "PC1_Amenaza_Fisica": 0.34533079968095165,
+      "PC2_Territorio_Proximidad": 0.024409313876097165,
+      "PC3_Densidad_Enjambre": 0.37773078820300404,
+      "Magnitud_Impacto_Abs": 0.24915696725335099
+    },
+    {
+      "index": "profundidad_km",
+      "PC1_Amenaza_Fisica": 0.38333460905597755,
+      "PC2_Territorio_Proximidad": 0.0910192168502414,
+      "PC3_Densidad_Enjambre": 0.2641035139726677,
+      "Magnitud_Impacto_Abs": 0.24615244662629554
+    },
+    {
+      "index": "aceleracion_estimada_pga_g",
+      "PC1_Amenaza_Fisica": -0.3433349670029729,
+      "PC2_Territorio_Proximidad": 0.21983074140101141,
+      "PC3_Densidad_Enjambre": -0.11801713643711921,
+      "Magnitud_Impacto_Abs": 0.22706094828036782
+    },
+    {
+      "index": "indice_exposicion_humana",
+      "PC1_Amenaza_Fisica": -0.2646019614941977,
+      "PC2_Territorio_Proximidad": -0.0142874113127475,
+      "PC3_Densidad_Enjambre": -0.32879204670037937,
+      "Magnitud_Impacto_Abs": 0.2025604731691082
+    },
+    {
+      "index": "longitud",
+      "PC1_Amenaza_Fisica": 0.3122543562101552,
+      "PC2_Territorio_Proximidad": 0.19322682157946666,
+      "PC3_Densidad_Enjambre": 0.04459417191574572,
+      "Magnitud_Impacto_Abs": 0.1833584499017892
+    },
+    {
+      "index": "latitud",
+      "PC1_Amenaza_Fisica": -0.11956898494182462,
+      "PC2_Territorio_Proximidad": -0.0375613757348986,
+      "PC3_Densidad_Enjambre": -0.3918805789410222,
+      "Magnitud_Impacto_Abs": 0.18300364653924847
+    },
+    {
+      "index": "tasa_sismicidad_local_30d",
+      "PC1_Amenaza_Fisica": 0.20840088068475748,
+      "PC2_Territorio_Proximidad": 0.05221176813733188,
+      "PC3_Densidad_Enjambre": -0.19567429149676543,
+      "Magnitud_Impacto_Abs": 0.1520956467729516
+    }
+  ]
+}

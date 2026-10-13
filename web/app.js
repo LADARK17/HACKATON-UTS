@@ -176,6 +176,12 @@ async function loadData() {
     // 1. Sismos procesados
     let sismosRes = await fetch('/api/sismos').catch(() => null);
     if (!sismosRes || !sismosRes.ok) {
+      sismosRes = await fetch('/data/processed/sismos_santander.json').catch(() => null);
+    }
+    if (!sismosRes || !sismosRes.ok) {
+      sismosRes = await fetch('../data/processed/sismos_santander.json').catch(() => null);
+    }
+    if (!sismosRes || !sismosRes.ok) {
       sismosRes = await fetch('../data/processed/dataset_sismico_santander_medio.csv');
       const csvText = await sismosRes.text();
       state.sismos = parseCSV(csvText);
@@ -186,6 +192,9 @@ async function loadData() {
     // 2. Riesgo territorial municipal
     let riesgoRes = await fetch('/api/riesgo').catch(() => null);
     if (!riesgoRes || !riesgoRes.ok) {
+      riesgoRes = await fetch('/data/processed/riesgo_territorial_santander.json').catch(() => null);
+    }
+    if (!riesgoRes || !riesgoRes.ok) {
       riesgoRes = await fetch('../data/processed/riesgo_territorial_santander.json');
     }
     state.riesgo = await riesgoRes.json();
@@ -193,12 +202,18 @@ async function loadData() {
     // 3. Metadatos de municipios
     let munRes = await fetch('/api/municipios').catch(() => null);
     if (!munRes || !munRes.ok) {
+      munRes = await fetch('/data/santander_municipios.json').catch(() => null);
+    }
+    if (!munRes || !munRes.ok) {
       munRes = await fetch('../data/santander_municipios.json');
     }
     state.municipios = await munRes.json();
 
     // 4. Metricas del modelo
     let metricasRes = await fetch('/api/metricas').catch(() => null);
+    if (!metricasRes || !metricasRes.ok) {
+      metricasRes = await fetch('/models/metricas_modelos.json').catch(() => null);
+    }
     if (!metricasRes || !metricasRes.ok) {
       metricasRes = await fetch('../models/metricas_modelos.json');
     }
@@ -553,7 +568,107 @@ function initUIEventListeners() {
     if (state.map) {
       state.map.invalidateSize();
     }
+    if (threeState.renderer && threeState.camera) {
+      const c = document.getElementById('three-container');
+      if (c && c.clientWidth && c.clientHeight) {
+        threeState.camera.aspect = c.clientWidth / c.clientHeight;
+        threeState.camera.updateProjectionMatrix();
+        threeState.renderer.setSize(c.clientWidth, c.clientHeight);
+      }
+    }
   });
+
+  // Listeners del Visualizador 3D Isométrico
+  const btnOpen3D = document.getElementById('btn-open-3d-modal');
+  if (btnOpen3D) btnOpen3D.addEventListener('click', openThreeJsModal);
+
+  const btnClose3D = document.getElementById('btn-close-3d-modal');
+  if (btnClose3D) btnClose3D.addEventListener('click', closeThreeJsModal);
+
+  const btnClose3DFooter = document.getElementById('btn-close-3d-modal-footer');
+  if (btnClose3DFooter) btnClose3DFooter.addEventListener('click', closeThreeJsModal);
+
+  const camPresetBtns = document.querySelectorAll('.view-3d-toolbar .btn-tool');
+  camPresetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      camPresetBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (btn.id === 'btn-cam-iso') setCameraPreset('iso');
+      else if (btn.id === 'btn-cam-ew') setCameraPreset('ew');
+      else if (btn.id === 'btn-cam-ns') setCameraPreset('ns');
+      else if (btn.id === 'btn-cam-top') setCameraPreset('top');
+    });
+  });
+
+  const btnCamReset = document.getElementById('btn-cam-reset');
+  if (btnCamReset) {
+    btnCamReset.addEventListener('click', () => {
+      camPresetBtns.forEach(b => b.classList.remove('active'));
+      const isoBtn = document.getElementById('btn-cam-iso');
+      if (isoBtn) isoBtn.classList.add('active');
+      setCameraPreset('iso');
+    });
+  }
+
+  const chkSlab = document.getElementById('chk-3d-slab');
+  if (chkSlab) {
+    chkSlab.addEventListener('change', (e) => {
+      if (threeState.slabGroup) threeState.slabGroup.visible = e.target.checked;
+    });
+  }
+
+  const chkNest = document.getElementById('chk-3d-nest');
+  if (chkNest) {
+    chkNest.addEventListener('change', (e) => {
+      if (threeState.nestGroup) threeState.nestGroup.visible = e.target.checked;
+    });
+  }
+
+  const chkSurface = document.getElementById('chk-3d-surface');
+  if (chkSurface) {
+    chkSurface.addEventListener('change', (e) => {
+      if (threeState.surfaceGroup) threeState.surfaceGroup.visible = e.target.checked;
+    });
+  }
+
+  const chkAutoRotate = document.getElementById('chk-3d-autorotate');
+  if (chkAutoRotate) {
+    chkAutoRotate.addEventListener('change', (e) => {
+      threeState.isRotating = e.target.checked;
+    });
+  }
+
+  // Listeners del Exportador de Fichas Técnicas Municipales en PDF
+  const btnQuickPdf = document.getElementById('btn-quick-ficha-pdf');
+  if (btnQuickPdf) {
+    btnQuickPdf.addEventListener('click', () => {
+      const mun = state.activeMunicipio === 'ALL' ? 'Bucaramanga' : state.activeMunicipio;
+      openMunicipalPdfReport(mun);
+    });
+  }
+
+  const btnClosePdf = document.getElementById('btn-close-pdf-modal');
+  if (btnClosePdf) btnClosePdf.addEventListener('click', closeMunicipalPdfReport);
+
+  const btnClosePdfFooter = document.getElementById('btn-close-pdf-modal-footer');
+  if (btnClosePdfFooter) btnClosePdfFooter.addEventListener('click', closeMunicipalPdfReport);
+
+  const btnPrintPdf = document.getElementById('btn-print-pdf');
+  if (btnPrintPdf) btnPrintPdf.addEventListener('click', printMunicipalPdf);
+
+  const modalPdf = document.getElementById('modal-ficha-pdf');
+  if (modalPdf) {
+    modalPdf.addEventListener('click', (e) => {
+      if (e.target === modalPdf) closeMunicipalPdfReport();
+    });
+  }
+
+  const modal3D = document.getElementById('modal-view-3d');
+  if (modal3D) {
+    modal3D.addEventListener('click', (e) => {
+      if (e.target === modal3D) closeThreeJsModal();
+    });
+  }
 }
 
 /**
@@ -1412,8 +1527,23 @@ function inspectMunicipio(nombre) {
         • Condición Geotécnica: <i>${item.vulnerabilidad_suelo}</i><br>
         • Sismos Superficiales (<40 km): <b>${item.sismos_superficiales_destructivos} sismos</b> (${item.pct_sismicidad_superficial}%)
       </div>
+
+      <!-- Botón de Exportación Directa de Ficha Técnica CMGRD (PDF) -->
+      <button id="btn-export-municipio-pdf" class="btn btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; font-size:12px; font-weight:700; background:linear-gradient(135deg, #059669, #10b981); border:1px solid #34d399; box-shadow:0 4px 14px rgba(16,185,129,0.3); cursor:pointer; border-radius:6px; color:#ffffff; transition:all 0.2s ease;">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <span>📄 Generar Ficha Técnica CMGRD (PDF)</span>
+      </button>
     </div>
   `;
+
+  const btnExportPdf = document.getElementById('btn-export-municipio-pdf');
+  if (btnExportPdf) {
+    btnExportPdf.addEventListener('click', () => {
+      openMunicipalPdfReport(item);
+    });
+  }
 }
 
 /**
@@ -1535,3 +1665,827 @@ function renderPCAChart() {
     ctx.fill();
   });
 }
+
+/* ==========================================================================
+   10. VISUALIZADOR ISOMÉTRICO 3D DEL NIDO SÍSMICO Y LOSA SUBDUCIDA (THREE.JS)
+   ========================================================================== */
+
+const threeState = {
+  initialized: false,
+  scene: null,
+  camera: null,
+  renderer: null,
+  controls: null,
+  animId: null,
+  sismosGroup: null,
+  slabGroup: null,
+  nestGroup: null,
+  surfaceGroup: null,
+  isRotating: true,
+  raycaster: new THREE.Raycaster(),
+  mouse: new THREE.Vector2(-9999, -9999),
+  hoveredMesh: null,
+  originalScale: null,
+  centerLon: -73.15,
+  centerLat: 6.85
+};
+
+/**
+ * Convierte coordenadas geográficas y profundidad (km) a coordenadas 3D locales
+ */
+function to3DCoords(lat, lon, depth) {
+  const x = (lon - threeState.centerLon) * 115;
+  const z = -(lat - threeState.centerLat) * 115;
+  const y = -depth * 0.70; // Superficie Y=0, subsuelo Y < 0
+  return { x, y, z };
+}
+
+/**
+ * Genera un Sprite 3D con texto nítido renderizado en Canvas 2D
+ */
+function make3DTextSprite(text, color = '#38bdf8', bgColor = 'rgba(10, 15, 29, 0.85)') {
+  const canvas = document.createElement('canvas');
+  canvas.width = 380;
+  canvas.height = 80;
+  const ctx = canvas.getContext('2d');
+
+  // Fondo redondeado estilo píldora
+  ctx.fillStyle = bgColor;
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(4, 4, 372, 72, 16);
+  } else {
+    ctx.rect(4, 4, 372, 72);
+  }
+  ctx.fill();
+
+  // Borde
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Texto
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 26px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 190, 40);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  const sprite = new THREE.Sprite(spriteMaterial);
+  sprite.scale.set(22, 4.6, 1);
+  return sprite;
+}
+
+/**
+ * Inicializa la escena Three.js, cámara, renderer, luces y mallas
+ */
+function initThreeVisualizer() {
+  if (typeof THREE === 'undefined') {
+    console.error('Three.js no está disponible en el entorno.');
+    return;
+  }
+
+  const container = document.getElementById('three-container');
+  if (!container) return;
+
+  const width = container.clientWidth || 900;
+  const height = container.clientHeight || 560;
+
+  // 1. Escena con niebla sutil de alta profundidad
+  threeState.scene = new THREE.Scene();
+  threeState.scene.background = new THREE.Color(0x060913);
+  threeState.scene.fog = new THREE.FogExp2(0x060913, 0.0014);
+
+  // 2. Cámara de perspectiva
+  threeState.camera = new THREE.PerspectiveCamera(45, width / height, 1, 2500);
+  threeState.camera.position.set(160, 110, 190);
+
+  // 3. Renderer WebGL acelerado
+  threeState.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  threeState.renderer.setSize(width, height);
+  threeState.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  container.innerHTML = '';
+  container.appendChild(threeState.renderer.domElement);
+
+  // 4. OrbitControls para interacción total
+  if (typeof THREE.OrbitControls !== 'undefined') {
+    threeState.controls = new THREE.OrbitControls(threeState.camera, threeState.renderer.domElement);
+    threeState.controls.enableDamping = true;
+    threeState.controls.dampingFactor = 0.06;
+    threeState.controls.target.set(0, -65, 0);
+    threeState.controls.maxDistance = 750;
+    threeState.controls.minDistance = 25;
+  }
+
+  // 5. Iluminación escénica
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+  threeState.scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.3);
+  dirLight.position.set(120, 220, 90);
+  threeState.scene.add(dirLight);
+
+  const nestGlowLight = new THREE.PointLight(0x06b6d4, 3.5, 320);
+  nestGlowLight.position.set(3.8, -108, 7.6);
+  threeState.scene.add(nestGlowLight);
+
+  // 6. Construir Capas: Superficie, Columna Nido, Losa Wadati-Benioff, Sismos
+  buildSurface3DLayer();
+  buildNestColumn3DLayer();
+  buildBenioffSlab3DLayer();
+  buildEarthquakes3DLayer();
+
+  // 7. Raycaster para inspección al pasar el cursor
+  setupThreeRaycaster(container);
+
+  threeState.initialized = true;
+
+  // Iniciar bucle de renderizado
+  function animateThreeScene() {
+    threeState.animId = requestAnimationFrame(animateThreeScene);
+    if (threeState.controls) threeState.controls.update();
+
+    if (threeState.isRotating && threeState.scene) {
+      threeState.scene.rotation.y += 0.0022;
+    }
+
+    threeState.renderer.render(threeState.scene, threeState.camera);
+  }
+  animateThreeScene();
+}
+
+/**
+ * Capa 1: Superficie de Santander a Y = 0 (Plano, Cabeceras, y Falla FSBS)
+ */
+function buildSurface3DLayer() {
+  threeState.surfaceGroup = new THREE.Group();
+
+  // Rejilla de referencia en la cota de superficie (0 km)
+  const grid = new THREE.GridHelper(220, 22, 0x0284c7, 0x1e293b);
+  grid.position.y = 0;
+  threeState.surfaceGroup.add(grid);
+
+  // Eje de profundidad vertical graduado
+  const depthAxisPoints = [
+    new THREE.Vector3(-100, 0, -100),
+    new THREE.Vector3(-100, -200 * 0.70, -100)
+  ];
+  const depthAxisGeom = new THREE.BufferGeometry().setFromPoints(depthAxisPoints);
+  const depthAxisLine = new THREE.Line(depthAxisGeom, new THREE.LineBasicMaterial({ color: 0x64748b, linewidth: 2 }));
+  threeState.surfaceGroup.add(depthAxisLine);
+
+  // Ticks y etiquetas de profundidad (0, 50, 100, 150, 200 km)
+  [0, 50, 100, 150, 200].forEach(d => {
+    const tickGeom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-103, -d * 0.70, -100),
+      new THREE.Vector3(-97, -d * 0.70, -100)
+    ]);
+    const tickLine = new THREE.Line(tickGeom, new THREE.LineBasicMaterial({ color: 0x38bdf8 }));
+    threeState.surfaceGroup.add(tickLine);
+
+    const lbl = make3DTextSprite(`${d} km`, '#94a3b8', 'rgba(15, 23, 42, 0.7)');
+    lbl.position.set(-112, -d * 0.70, -100);
+    lbl.scale.set(14, 3.2, 1);
+    threeState.surfaceGroup.add(lbl);
+  });
+
+  // Marcadores de cabeceras municipales en superficie (Y = 0)
+  const cities = [
+    { name: 'Mesa de Los Santos (Foco)', lat: 6.7806, lon: -73.1167, color: '#06b6d4', pinColor: 0x06b6d4 },
+    { name: 'Bucaramanga (AMB)', lat: 7.1193, lon: -73.1227, color: '#38bdf8', pinColor: 0x38bdf8 },
+    { name: 'Barrancabermeja', lat: 7.0653, lon: -73.8547, color: '#fbbf24', pinColor: 0xf59e0b },
+    { name: 'San Gil', lat: 6.5593, lon: -73.1347, color: '#34d399', pinColor: 0x10b981 },
+    { name: 'Socorro', lat: 6.4678, lon: -73.2622, color: '#c084fc', pinColor: 0xa855f7 }
+  ];
+
+  cities.forEach(c => {
+    const pos = to3DCoords(c.lat, c.lon, 0);
+
+    // Pin cilíndrico invertido
+    const pinGeom = new THREE.ConeGeometry(1.6, 5.5, 8);
+    const pinMat = new THREE.MeshStandardMaterial({ color: c.pinColor, emissive: c.pinColor, emissiveIntensity: 0.6 });
+    const pinMesh = new THREE.Mesh(pinGeom, pinMat);
+    pinMesh.rotation.x = Math.PI; // punta hacia el suelo
+    pinMesh.position.set(pos.x, 2.75, pos.z);
+    threeState.surfaceGroup.add(pinMesh);
+
+    // Sprite de texto flotante encima del pin
+    const sprite = make3DTextSprite(c.name, c.color);
+    sprite.position.set(pos.x, 7.5, pos.z);
+    threeState.surfaceGroup.add(sprite);
+  });
+
+  // Traza en superficie de la Falla Bucaramanga-Santa Marta (FSBS)
+  if (COORDS.falla_bsm && COORDS.falla_bsm.length > 0) {
+    const faultPoints = COORDS.falla_bsm.map(pt => {
+      const p = to3DCoords(pt[0], pt[1], 0);
+      return new THREE.Vector3(p.x, 0.4, p.z);
+    });
+    const faultGeom = new THREE.BufferGeometry().setFromPoints(faultPoints);
+    const faultMat = new THREE.LineBasicMaterial({ color: 0xf43f5e, linewidth: 3 });
+    const faultLine = new THREE.Line(faultGeom, faultMat);
+    threeState.surfaceGroup.add(faultLine);
+
+    const faultLabel = make3DTextSprite('Falla Bucaramanga-Sta Marta (FSBS)', '#f43f5e');
+    const midPt = faultPoints[Math.floor(faultPoints.length / 2)];
+    faultLabel.position.set(midPt.x + 8, 3.5, midPt.z);
+    faultLabel.scale.set(24, 4.8, 1);
+    threeState.surfaceGroup.add(faultLabel);
+  }
+
+  threeState.scene.add(threeState.surfaceGroup);
+}
+
+/**
+ * Capa 2: Columna Focal Subterránea del Nido Sísmico de Bucaramanga (130 - 175 km)
+ */
+function buildNestColumn3DLayer() {
+  threeState.nestGroup = new THREE.Group();
+
+  const lsPos = to3DCoords(6.7806, -73.1167, 0);
+  const minDepthKm = 130;
+  const maxDepthKm = 175;
+  const height3D = (maxDepthKm - minDepthKm) * 0.70; // ~31.5
+  const centerY = -((minDepthKm + maxDepthKm) / 2) * 0.70; // ~ -106.75
+  const radius = 17;
+
+  // Cilindro volumétrico translúcido que envuelve el nido
+  const cylGeom = new THREE.CylinderGeometry(radius, radius, height3D, 36, 1, true);
+  const cylMat = new THREE.MeshStandardMaterial({
+    color: 0x06b6d4,
+    emissive: 0x0891b2,
+    emissiveIntensity: 0.5,
+    transparent: true,
+    opacity: 0.22,
+    side: THREE.DoubleSide,
+    roughness: 0.2
+  });
+  const cylMesh = new THREE.Mesh(cylGeom, cylMat);
+  cylMesh.position.set(lsPos.x, centerY, lsPos.z);
+  threeState.nestGroup.add(cylMesh);
+
+  // Anillos de cota a 130 km, 150 km, y 175 km
+  [130, 150, 175].forEach(d => {
+    const ringGeom = new THREE.TorusGeometry(radius, 0.45, 8, 36);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+    ringMesh.rotation.x = Math.PI / 2;
+    ringMesh.position.set(lsPos.x, -d * 0.70, lsPos.z);
+    threeState.nestGroup.add(ringMesh);
+  });
+
+  // Línea guía vertical continua desde Los Santos superficie (0 km) directo a la columna del Nido
+  const guidePoints = [
+    new THREE.Vector3(lsPos.x, 0, lsPos.z),
+    new THREE.Vector3(lsPos.x, centerY - height3D / 2, lsPos.z)
+  ];
+  const guideGeom = new THREE.BufferGeometry().setFromPoints(guidePoints);
+  const guideMat = new THREE.LineDashedMaterial({ color: 0x38bdf8, dashSize: 3, gapSize: 2 });
+  const guideLine = new THREE.Line(guideGeom, guideMat);
+  guideLine.computeLineDistances();
+  threeState.nestGroup.add(guideLine);
+
+  // Rótulo 3D de la Columna Focal
+  const nestSprite = make3DTextSprite('Columna Focal: Nido Los Santos (130-175 km)', '#06b6d4');
+  nestSprite.position.set(lsPos.x + 24, centerY, lsPos.z);
+  nestSprite.scale.set(30, 5.2, 1);
+  threeState.nestGroup.add(nestSprite);
+
+  threeState.scene.add(threeState.nestGroup);
+}
+
+/**
+ * Capa 3: Losa Tectónica de Wadati-Benioff (Placa subducida que buza ~43° hacia el Este bajo Santander)
+ */
+function buildBenioffSlab3DLayer() {
+  threeState.slabGroup = new THREE.Group();
+
+  const slabWidth = 190;   // Extensión Oeste-Este (Dirección de buzamiento)
+  const slabLength = 230;  // Extensión Norte-Sur (Rumbo tectónico)
+  const segsX = 18;
+  const segsZ = 22;
+
+  const slabGeom = new THREE.PlaneGeometry(slabWidth, slabLength, segsX, segsZ);
+  slabGeom.rotateX(-Math.PI / 2); // Orientar en plano horizontal
+
+  // Deformar vértices para crear el ángulo de buzamiento geocientífico de ~43° hacia el Este:
+  // Al Oeste (vx = -95), la losa se encuentra a ~30 km de profundidad (Y = -21)
+  // Al centro (vx = 3.8, Los Santos), la losa intercepta el nido sísmico a ~150 km (Y = -105)
+  // Al Este (vx = +95), la losa desciende a >210 km (Y = -147)
+  const posAttr = slabGeom.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    const vx = posAttr.getX(i);
+    const depthKm = 30 + ((vx + 95) / 190) * 180;
+    posAttr.setY(i, -depthKm * 0.70);
+  }
+  slabGeom.computeVertexNormals();
+
+  // Superficie translúcida de la placa
+  const slabMat = new THREE.MeshStandardMaterial({
+    color: 0x1e3a8a,
+    emissive: 0x0284c7,
+    emissiveIntensity: 0.28,
+    transparent: true,
+    opacity: 0.32,
+    side: THREE.DoubleSide,
+    roughness: 0.3
+  });
+  const slabMesh = new THREE.Mesh(slabGeom, slabMat);
+  threeState.slabGroup.add(slabMesh);
+
+  // Malla reticular brillante (Grid isolíneas de la losa)
+  const slabWireMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.28
+  });
+  const slabWireMesh = new THREE.Mesh(slabGeom, slabWireMat);
+  threeState.slabGroup.add(slabWireMesh);
+
+  // Rótulo 3D indicando la cinemática de la losa subducida
+  const slabSprite = make3DTextSprite('Losa Subducida Wadati-Benioff (Buzamiento ~43° Este)', '#38bdf8');
+  slabSprite.position.set(-30, -50 * 0.70, 80);
+  slabSprite.scale.set(34, 5.4, 1);
+  threeState.slabGroup.add(slabSprite);
+
+  threeState.scene.add(threeState.slabGroup);
+}
+
+/**
+ * Capa 4: 1,082 Sismos representados como esferas tridimensionales
+ */
+function buildEarthquakes3DLayer() {
+  threeState.sismosGroup = new THREE.Group();
+
+  if (!state.sismos || state.sismos.length === 0) return;
+
+  state.sismos.forEach(s => {
+    const lat = s.latitud;
+    const lon = s.longitud;
+    const depth = s.profundidad_km || 150;
+    const mag = s.magnitud || 3.0;
+    if (isNaN(lat) || isNaN(lon)) return;
+
+    const coords = to3DCoords(lat, lon, depth);
+
+    // Color según estrato sismotectónico
+    let hexColor = 0x06b6d4; // Cyan Nido
+    let isNest = false;
+    if (depth < 45) {
+      hexColor = 0xf43f5e; // Rojo Cortical
+    } else if (depth <= 120) {
+      hexColor = 0xf59e0b; // Ámbar Intermedio
+    } else if (depth <= 175) {
+      hexColor = 0x06b6d4; // Cyan Núcleo del Nido
+      isNest = true;
+    } else {
+      hexColor = 0xa855f7; // Púrpura Ultra-profundo
+    }
+
+    // Radio proporcional a la magnitud
+    const radius = Math.max(0.75 + (mag - 2.0) * 0.9, 0.75);
+
+    const sphereGeom = new THREE.SphereGeometry(radius, 8, 8);
+    const sphereMat = new THREE.MeshStandardMaterial({
+      color: hexColor,
+      emissive: hexColor,
+      emissiveIntensity: isNest ? 0.65 : 0.35,
+      roughness: 0.25,
+      metalness: 0.1
+    });
+
+    const mesh = new THREE.Mesh(sphereGeom, sphereMat);
+    mesh.position.set(coords.x, coords.y, coords.z);
+    mesh.userData = {
+      sismo: s,
+      origScale: 1.0,
+      hexColor: hexColor
+    };
+
+    threeState.sismosGroup.add(mesh);
+  });
+
+  threeState.scene.add(threeState.sismosGroup);
+
+  const countBadge = document.getElementById('hud-3d-count');
+  if (countBadge) {
+    countBadge.textContent = `${state.sismos.length} sismos`;
+  }
+}
+
+/**
+ * Configura el Raycaster para detección hover interactiva de sismos en el canvas 3D
+ */
+function setupThreeRaycaster(container) {
+  const tooltip = document.getElementById('three-tooltip');
+
+  container.addEventListener('pointermove', (event) => {
+    const rect = container.getBoundingClientRect();
+    threeState.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    threeState.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    if (!threeState.camera || !threeState.sismosGroup) return;
+
+    threeState.raycaster.setFromCamera(threeState.mouse, threeState.camera);
+    const intersects = threeState.raycaster.intersectObjects(threeState.sismosGroup.children);
+
+    if (intersects.length > 0) {
+      const hit = intersects[0].object;
+      const s = hit.userData.sismo;
+
+      // Restaurar elemento previo
+      if (threeState.hoveredMesh && threeState.hoveredMesh !== hit) {
+        threeState.hoveredMesh.scale.set(1, 1, 1);
+        if (threeState.hoveredMesh.material.emissiveIntensity) {
+          threeState.hoveredMesh.material.emissiveIntensity = 0.35;
+        }
+      }
+
+      threeState.hoveredMesh = hit;
+      hit.scale.set(1.9, 1.9, 1.9);
+      hit.material.emissiveIntensity = 1.0;
+
+      // Tooltip flotante con datos geocientíficos
+      if (tooltip && s) {
+        const mag = Number(s.magnitud || 3.0);
+        const prof = Number(s.profundidad_km || 150.0);
+        const colorHex = hit.userData.hexColor.toString(16).padStart(6, '0');
+
+        tooltip.innerHTML = `
+          <div style="font-size:10px; color:#38bdf8; font-weight:800; text-transform:uppercase;">EVENTO OFICIAL SGC</div>
+          <div style="font-size:13px; font-weight:800; color:#${colorHex}; margin:2px 0;">M ${mag.toFixed(1)} Mw · ${prof.toFixed(1)} km</div>
+          <div style="font-size:10.5px; color:#cbd5e1;"><b>Régimen:</b> ${prof <= 45 ? 'Cortical (<45 km)' : prof <= 175 ? 'Nido Bucaramanga' : 'Manto Profundo'}</div>
+          <div style="font-size:10.5px; color:#94a3b8;"><b>Cabecera:</b> ${s.municipio_cercano || 'Los Santos'} (${(s.distancia_municipio_km || 0).toFixed(1)} km)</div>
+          <div style="font-size:9.5px; color:#fbbf24; margin-top:2px;"><b>Falla:</b> ${s.falla_geologica_asociada || 'FSBS'}</div>
+        `;
+        tooltip.style.left = `${event.clientX - rect.left}px`;
+        tooltip.style.top = `${event.clientY - rect.top}px`;
+        tooltip.classList.remove('hidden');
+      }
+    } else {
+      if (threeState.hoveredMesh) {
+        threeState.hoveredMesh.scale.set(1, 1, 1);
+        threeState.hoveredMesh.material.emissiveIntensity = 0.35;
+        threeState.hoveredMesh = null;
+      }
+      if (tooltip) {
+        tooltip.classList.add('hidden');
+      }
+    }
+  });
+
+  container.addEventListener('pointerleave', () => {
+    if (threeState.hoveredMesh) {
+      threeState.hoveredMesh.scale.set(1, 1, 1);
+      threeState.hoveredMesh = null;
+    }
+    if (tooltip) tooltip.classList.add('hidden');
+  });
+}
+
+/**
+ * Abre el modal del Visualizador 3D y recalcula el tamaño del canvas
+ */
+function openThreeJsModal() {
+  const modal = document.getElementById('modal-view-3d');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  if (!threeState.initialized) {
+    initThreeVisualizer();
+  }
+
+  setTimeout(() => {
+    if (threeState.renderer && threeState.camera) {
+      const container = document.getElementById('three-container');
+      if (container && container.clientWidth && container.clientHeight) {
+        threeState.camera.aspect = container.clientWidth / container.clientHeight;
+        threeState.camera.updateProjectionMatrix();
+        threeState.renderer.setSize(container.clientWidth, container.clientHeight);
+      }
+    }
+  }, 120);
+}
+
+/**
+ * Cierra el modal del Visualizador 3D
+ */
+function closeThreeJsModal() {
+  const modal = document.getElementById('modal-view-3d');
+  if (modal) modal.classList.add('hidden');
+}
+
+/**
+ * Establece preajustes de ángulo de cámara para la visualización 3D
+ */
+function setCameraPreset(type) {
+  if (!threeState.camera || !threeState.controls) return;
+
+  threeState.isRotating = false;
+  const chkAuto = document.getElementById('chk-3d-autorotate');
+  if (chkAuto) chkAuto.checked = false;
+
+  if (type === 'iso') {
+    // Vista Isométrica general
+    threeState.camera.position.set(160, 110, 190);
+    threeState.controls.target.set(0, -65, 0);
+  } else if (type === 'ew') {
+    // Corte Transversal Oeste-Este (Muestra el buzamiento hacia el Este de la Losa Benioff)
+    threeState.camera.position.set(0, -55, 250);
+    threeState.controls.target.set(0, -65, 0);
+  } else if (type === 'ns') {
+    // Corte Longitudinal Norte-Sur (Alineado con el rumbo de la Falla Bucaramanga)
+    threeState.camera.position.set(250, -55, 0);
+    threeState.controls.target.set(0, -65, 0);
+  } else if (type === 'top') {
+    // Vista Cenital / Planta de Santander
+    threeState.camera.position.set(0, 240, 0);
+    threeState.controls.target.set(0, -65, 0);
+  }
+
+  threeState.controls.update();
+}
+
+/* ==========================================================================
+   11. EXPORTADOR DE FICHAS TÉCNICAS MUNICIPALES EN PDF (CMGRD - 1 PÁGINA)
+   ========================================================================== */
+
+/**
+ * Genera y despliega la Ficha Técnica Oficial de 1 Página para entrega directa al CMGRD
+ */
+function openMunicipalPdfReport(target) {
+  let item = null;
+  if (typeof target === 'string') {
+    item = state.riesgo.find(r => r.municipio.toLowerCase() === target.toLowerCase());
+  } else if (target && target.municipio) {
+    item = target;
+  }
+
+  // Fallback si no hay selección
+  if (!item) {
+    item = state.riesgo[0] || {
+      municipio: 'Bucaramanga',
+      provincia: 'Metropolitana',
+      poblacion: 613400,
+      icrst_score: 56.2,
+      nivel_riesgo_territorial: 'Alto (Monitoreo Continuo)',
+      subindice_peligro_fisico: 3.0,
+      subindice_exposicion: 100.0,
+      subindice_vulnerabilidad: 80.0,
+      falla_cercana: 'Falla Bucaramanga-Santa Marta',
+      vulnerabilidad_suelo: 'Escarpes y depósitos fluviotorrenciales',
+      total_sismos_registrados: 4,
+      magnitud_maxima: 4.3,
+      aceleracion_pga_maxima_g: 0.0109,
+      sismos_superficiales_destructivos: 0,
+      pct_sismicidad_superficial: 0.0
+    };
+  }
+
+  const munMeta = state.municipios.find(m => m.municipio.toLowerCase() === item.municipio.toLowerCase()) || {};
+  const codigoDane = munMeta.codigo_dane || item.codigo_dane || '68001';
+  const zonaGeologica = munMeta.zona_geologica || 'Cordillera Oriental de Colombia';
+
+  // Configuración cromática y nivel de alerta
+  const score = Number(item.icrst_score || 40.0);
+  let scoreColor = '#059669';
+  let badgeBorder = '#34d399';
+  let levelTag = 'Bajo a Moderado';
+  let priorityClass = 'media';
+
+  if (score >= 50) {
+    scoreColor = '#dc2626';
+    badgeBorder = '#f87171';
+    levelTag = 'MUY ALTO / PRIORITARIO';
+    priorityClass = 'urgente';
+  } else if (score >= 35) {
+    scoreColor = '#d97706';
+    badgeBorder = '#fbbf24';
+    levelTag = 'ALTO (MONITOREO CONTINUO)';
+    priorityClass = 'alta';
+  }
+
+  // Recomendaciones específicas adaptadas a la realidad geofísica del municipio
+  const isNestNest = item.municipio.toLowerCase().includes('santos');
+  const isRiverPort = item.municipio.toLowerCase().includes('barranca');
+  const isMetro = ['bucaramanga', 'floridablanca', 'piedecuesta', 'giron'].includes(item.municipio.toLowerCase());
+
+  let customAdvice1, customAdvice2, customAdvice3, customAdvice4;
+
+  if (isNestNest) {
+    customAdvice1 = 'Diferenciación Operativa de Alarmas: El 96% de los sismos son profundos (~155 km) y no generan daño cortical destructivo.';
+    customAdvice2 = 'Inspección de Taludes y Miradores: Monitorear escarpes de roca sedimentaria del Cañón del Chicamocha ante sismos M ≥ 5.0.';
+    customAdvice3 = 'Zonificación Turística: Exigir anclaje sismorresistente en infraestructura ecoturística, glampings y teleférico.';
+    customAdvice4 = 'Actualización EOT: Incorporar mapa de aceleraciones espectrales del Nido Sísmico como insumo estructural municipal.';
+  } else if (isRiverPort) {
+    customAdvice1 = 'Mitigación de Licuefacción: Estudios de suelos blandos cuaternarios del Río Magdalena en zonas residenciales y refinería.';
+    customAdvice2 = 'Protección de Activos Petroquímicos: Planes de contingencia ante aceleraciones locales originadas en fallas Cantagallo/Simití.';
+    customAdvice3 = 'Inspección de Puentes y Muelles Fluviales: Ensayos no destructivos en infraestructura de transporte y abastecimiento.';
+    customAdvice4 = 'Actualización POT: Prohibición estricta de urbanización en llanuras aluviales de alta susceptibilidad sísmica e inundación.';
+  } else if (isMetro) {
+    customAdvice1 = 'Monitoreo de la Escarpa de Bucaramanga: Control geotécnico e instrumentación de laderas ante amenaza sísmico-gravitacional.';
+    customAdvice2 = 'Refuerzo de Edificaciones Indispensables: Hospitales de III Nivel, Estaciones de Bomberos y Centrales de Mando (NSR-10 Grupo IV).';
+    customAdvice3 = 'Microzonificación Sísmica Obligatoria: Aplicación rigurosa del Decreto Municipal para construcciones en altura.';
+    customAdvice4 = 'Simulacros de Evacuación Masiva: Preparación ante eventual ruptura del Sistema de Fallas Bucaramanga-Santa Marta (FSBS).';
+  } else {
+    customAdvice1 = 'Revisión Estructural del Centro Histórico: Diagnóstico y amarre de edificaciones patrimoniales en tapia pisada y adobe.';
+    customAdvice2 = 'Actualización del Esquema de Ordenamiento Territorial (EOT) con componente de amenaza sísmica local (NSR-10).';
+    customAdvice3 = 'Fortalecimiento del Cuerpo de Bomberos y Defensa Civil con equipos de rescate urbano en estructuras colapsadas.';
+    customAdvice4 = 'Capacitación Ciudadana en Gestión del Riesgo: Protocolos de autoprotección en instituciones educativas y rurales.';
+  }
+
+  const container = document.getElementById('report-paper-content');
+  if (!container) return;
+
+  container.innerHTML = `
+    <!-- Encabezado Institucional Departamental -->
+    <table class="doc-header-table">
+      <tr>
+        <td style="width: 65%;">
+          <div class="doc-logo-area">
+            <div class="doc-badge-shield">SGC</div>
+            <div class="doc-header-text">
+              <h2>República de Colombia · Departamento de Santander</h2>
+              <h3>Comité Municipal para la Gestión del Riesgo de Desastres (CMGRD)</h3>
+              <p>Sistema Departamental de Gestión del Riesgo · Ley 1523 de 2012 · Red Sismológica Nacional</p>
+            </div>
+          </div>
+        </td>
+        <td style="width: 35%;">
+          <div class="doc-radicado-box">
+            <div><b>RADICADO OFICIAL:</b></div>
+            <div class="doc-radicado-num">CMGRD-SAN-2026-${codigoDane}</div>
+            <div style="margin-top: 3px;">Fecha: 13 de Octubre de 2026</div>
+            <div>Vigencia: Periodo Constitucional 2024 - 2027</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Barra de Título del Documento -->
+    <div class="doc-title-bar">
+      <h1>FICHA TÉCNICA EJECUTIVA DE DIAGNÓSTICO SÍSMICO Y VULNERABILIDAD TERRITORIAL</h1>
+      <span>MUNICIPIO: ${item.municipio.toUpperCase()}</span>
+    </div>
+
+    <!-- Sección Hero: Diagnóstico General y Nivel ICRST -->
+    <div class="doc-hero-section">
+      <div class="doc-mun-details">
+        <h3>${item.municipio} — Provincia de ${item.provincia}</h3>
+        <div class="doc-mun-meta">
+          <span><b>Código DANE:</b> ${codigoDane}</span>
+          <span><b>Población DANE:</b> ${Number(item.poblacion || 0).toLocaleString()} hab.</span>
+          <span><b>Zona Geológica:</b> ${zonaGeologica}</span>
+        </div>
+        <p class="doc-mun-desc">
+          <b>Diagnóstico Multivariado:</b> La unidad territorial presenta un índice integral de riesgo sísmico clasificado como 
+          <strong style="color: ${scoreColor};">${item.nivel_riesgo_territorial}</strong>. 
+          El modelo de Machine Learning determina que el riesgo real en este territorio está modulado por la interacción entre la frecuencia profunda del Nido de Los Santos (~155 km) y la cercanía a la estructura cortical <i>${item.falla_cercana}</i> con suelos geotécnicos caracterizados como <i>${item.vulnerabilidad_suelo}</i>.
+        </p>
+      </div>
+
+      <div class="doc-score-card" style="border-color: ${badgeBorder};">
+        <span style="font-size: 8.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Índice Compuesto ICRST</span>
+        <div class="doc-score-val" style="color: ${scoreColor};">${score.toFixed(1)} <span style="font-size: 11px; font-weight: 700;">/ 100</span></div>
+        <div class="doc-score-level" style="color: ${scoreColor};">${levelTag}</div>
+        <span style="font-size: 7.5px; color: #94a3b8; margin-top: 2px;">Pesos: Peligro 40% | Exp 35% | Suelo 25%</span>
+      </div>
+    </div>
+
+    <!-- Desglose de los Tres Pilares del Modelo ICRST -->
+    <div class="doc-pilares-grid">
+      <!-- Pilar 1: Peligro Físico -->
+      <div class="doc-pilar-card">
+        <h4>
+          <span>1. Peligro Físico Sísmico</span>
+          <span class="doc-pilar-val" style="color: #dc2626;">${Number(item.subindice_peligro_fisico || 0).toFixed(1)}%</span>
+        </h4>
+        <table class="doc-pilar-table">
+          <tr><td>Sismos Históricos Registrados:</td><td>${item.total_sismos_registrados} eventos</td></tr>
+          <tr><td>Magnitud Instrumental Máxima:</td><td>M ${Number(item.magnitud_maxima || 0).toFixed(1)} Mw</td></tr>
+          <tr><td>Aceleración PGA Estimada:</td><td>${Number(item.aceleracion_pga_maxima_g || 0).toFixed(4)} g</td></tr>
+          <tr><td>Falla Cortical Asociada:</td><td style="color:#0284c7;">${item.falla_cercana}</td></tr>
+        </table>
+      </div>
+
+      <!-- Pilar 2: Exposición Poblacional -->
+      <div class="doc-pilar-card">
+        <h4>
+          <span>2. Exposición y Activos</span>
+          <span class="doc-pilar-val" style="color: #d97706;">${Number(item.subindice_exposicion || 0).toFixed(1)}%</span>
+        </h4>
+        <table class="doc-pilar-table">
+          <tr><td>Censo Poblacional DANE:</td><td>${Number(item.poblacion || 0).toLocaleString()} hab.</td></tr>
+          <tr><td>Densidad de Activos Críticos:</td><td>Hospitales, Redes, Vías</td></tr>
+          <tr><td>Régimen Tectónico ML:</td><td style="color:#0284c7;">${item.cluster_nombre_dominante || 'Regional'}</td></tr>
+          <tr><td>Peso en el ICRST Municipal:</td><td>35% Ponderado</td></tr>
+        </table>
+      </div>
+
+      <!-- Pilar 3: Vulnerabilidad del Suelo -->
+      <div class="doc-pilar-card">
+        <h4>
+          <span>3. Vulnerabilidad Geotécnica</span>
+          <span class="doc-pilar-val" style="color: #0284c7;">${Number(item.subindice_vulnerabilidad || 0).toFixed(1)}%</span>
+        </h4>
+        <table class="doc-pilar-table">
+          <tr><td>Condición del Suelo:</td><td style="font-size:8px;">${item.vulnerabilidad_suelo}</td></tr>
+          <tr><td>Sismos Superficiales (&lt;40 km):</td><td>${item.sismos_superficiales_destructivos} sismos (${item.pct_sismicidad_superficial}%)</td></tr>
+          <tr><td>Tipo Geotécnico NSR-10:</td><td>Perfiles C / D / E</td></tr>
+          <tr><td>Susceptibilidad a Amplificación:</td><td style="color:#dc2626;">Fallas Activas</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Matriz de Acciones Operativas Inmediatas para el CMGRD -->
+    <div class="doc-section-title">
+      <span>Matriz de Recomendaciones Inmediatas de Mitigación (CMGRD)</span>
+      <span style="font-size: 8px; font-weight: 600; color: #64748b;">Plan de Acción Municipal · Ley 1523 / 2012</span>
+    </div>
+
+    <table class="doc-matrix-table">
+      <thead>
+        <tr>
+          <th style="width: 8%;">Prioridad</th>
+          <th style="width: 32%;">Línea de Acción Estratégica</th>
+          <th style="width: 42%;">Medida Operativa Concreta para el Territorio</th>
+          <th style="width: 18%;">Entidad Responsable</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="doc-priority-tag urgente">Urgente</span></td>
+          <td><b>Ordenamiento Territorial & Norma NSR-10</b></td>
+          <td>${customAdvice1}</td>
+          <td>Secretaría de Planeación</td>
+        </tr>
+        <tr>
+          <td><span class="doc-priority-tag alta">Alta</span></td>
+          <td><b>Infraestructura Indispensable (Grupo IV)</b></td>
+          <td>${customAdvice2}</td>
+          <td>Secretaría de Infraestructura</td>
+        </tr>
+        <tr>
+          <td><span class="doc-priority-tag alta">Alta</span></td>
+          <td><b>Preparación y Rutas de Evacuación</b></td>
+          <td>${customAdvice3}</td>
+          <td>Bomberos · Defensa Civil</td>
+        </tr>
+        <tr>
+          <td><span class="doc-priority-tag media">Media</span></td>
+          <td><b>Fondo Municipal de Gestión del Riesgo</b></td>
+          <td>${customAdvice4}</td>
+          <td>Alcaldía · CMGRD</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Bloque de Firmas Institucionales para Validez en Sala CMGRD -->
+    <div class="doc-signatures-grid">
+      <div class="doc-sig-box">
+        <div style="height: 28px;"></div>
+        <div class="doc-sig-name">COORDINADOR(A) DEL CMGRD</div>
+        <div class="doc-sig-role">Comité Municipal de Gestión del Riesgo<br>Alcaldía Municipal de ${item.municipio}</div>
+      </div>
+      <div class="doc-sig-box">
+        <div style="height: 28px;"></div>
+        <div class="doc-sig-name">ALCALDE(SA) MUNICIPAL</div>
+        <div class="doc-sig-role">Presidente del Consejo Municipal de Gestión del Riesgo<br>Municipio de ${item.municipio}, Santander</div>
+      </div>
+      <div class="doc-sig-box">
+        <div style="height: 28px;"></div>
+        <div class="doc-sig-name">DIRECCIÓN CIENTÍFICA GEOSISMO</div>
+        <div class="doc-sig-role">Inteligencia Artificial Territorial & Machine Learning<br>Unidades Tecnológicas de Santander (UTS / CIAI)</div>
+      </div>
+    </div>
+
+    <!-- Pie Legal Oficial -->
+    <div class="doc-footer-legal">
+      <span>Fuente Primaria: Servicio Geológico Colombiano (RSNC) 2004-2026 · Censo Nacional DANE · Norma Sismorresistente NSR-10.</span>
+      <span>Documento técnico válido para PMGRD y EMRE · Generado por GeoSismo Santander ML</span>
+    </div>
+  `;
+
+  const modal = document.getElementById('modal-ficha-pdf');
+  if (modal) modal.classList.remove('hidden');
+}
+
+/**
+ * Cierra el modal de Ficha Técnica Municipal
+ */
+function closeMunicipalPdfReport() {
+  const modal = document.getElementById('modal-ficha-pdf');
+  if (modal) modal.classList.add('hidden');
+}
+
+/**
+ * Lanza la impresión nativa formateada para 1 página Letter en PDF
+ */
+function printMunicipalPdf() {
+  window.print();
+}
+

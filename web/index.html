@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   
   <!-- Custom CSS (Cache-busted) -->
-  <link rel="stylesheet" href="styles.css?v=20261013-16">
+  <link rel="stylesheet" href="styles.css?v=20261013-18">
 </head>
 <body>
   <!-- Top Navigation & Brand Bar -->
@@ -64,6 +64,14 @@
           <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
         </svg>
         <span>Rúbrica & Métricas</span>
+      </button>
+      <button id="btn-open-3d-modal" class="btn btn-secondary btn-3d-glow" title="Visualizador 3D Isométrico del Nido Sísmico de Bucaramanga y la Losa Subducida">
+        <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+        <span>Nido 3D Subterráneo</span>
       </button>
       <button id="btn-reset-map" class="btn btn-primary" title="Restablecer vista a Santander">
         <svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -279,7 +287,13 @@
 
           <!-- Filter: Municipio de Santander -->
           <div class="filter-group">
-            <label for="select-municipio" class="filter-label">Unidad Territorial (Municipio):</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label for="select-municipio" class="filter-label" style="margin-bottom:0;">Unidad Territorial (Municipio):</label>
+              <button id="btn-quick-ficha-pdf" class="btn-micro-action" title="Generar Ficha Técnica CMGRD del municipio seleccionado" style="font-size:10px; color:#10b981; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); border-radius:4px; padding:2px 7px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+                <svg class="svg-icon" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span>Ficha CMGRD</span>
+              </button>
+            </div>
             <select id="select-municipio" class="custom-select">
               <option value="ALL">Todo Santander (16 Municipios)</option>
             </select>
@@ -709,10 +723,166 @@
     </div>
   </div>
 
+  <!-- Modal Dialog: Visualizador 3D Isométrico del Nido Sísmico & Losa Benioff (Three.js) -->
+  <div id="modal-view-3d" class="modal-backdrop hidden">
+    <div class="modal-card modal-card-3d">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge" style="color: #38bdf8;">Geocientífico 3D · Three.js Offline</span>
+          <h3 class="modal-title">Tomografía Sísmica 3D: Nido de Bucaramanga & Losa Subducida</h3>
+          <p class="modal-subtitle">Geometría hipocentral subterránea (130 - 175 km) y buzamiento tectónico (~43° E) bajo Santander</p>
+        </div>
+        <div class="modal-header-actions">
+          <button id="btn-close-3d-modal" class="btn-close" aria-label="Cerrar visualizador 3D">
+            <svg class="svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Herramientas de Cámara y Controles 3D -->
+      <div class="view-3d-toolbar">
+        <div class="toolbar-group">
+          <span class="toolbar-label">Cámara:</span>
+          <button id="btn-cam-iso" class="btn-tool active" title="Perspectiva Isométrica General">Isométrica</button>
+          <button id="btn-cam-ew" class="btn-tool" title="Corte Transversal Oeste-Este (Buzamiento Losa Wadati-Benioff)">Corte W-E (Losa)</button>
+          <button id="btn-cam-ns" class="btn-tool" title="Corte Longitudinal Norte-Sur (Falla FSBS)">Corte N-S</button>
+          <button id="btn-cam-top" class="btn-tool" title="Vista Cenital / Planta de Santander">Superficie</button>
+        </div>
+
+        <div class="toolbar-group">
+          <span class="toolbar-label">Elementos 3D:</span>
+          <label class="toggle-tool-label">
+            <input type="checkbox" id="chk-3d-slab" checked>
+            <span>Losa Subducida</span>
+          </label>
+          <label class="toggle-tool-label">
+            <input type="checkbox" id="chk-3d-nest" checked>
+            <span>Columna Nido (130-170 km)</span>
+          </label>
+          <label class="toggle-tool-label">
+            <input type="checkbox" id="chk-3d-surface" checked>
+            <span>Plano Santander</span>
+          </label>
+          <label class="toggle-tool-label">
+            <input type="checkbox" id="chk-3d-autorotate" checked>
+            <span>Auto-rotación</span>
+          </label>
+        </div>
+
+        <div class="toolbar-group toolbar-group-reset">
+          <button id="btn-cam-reset" class="btn btn-secondary btn-sm" title="Restablecer posición inicial de la cámara">Reiniciar Vista</button>
+        </div>
+      </div>
+
+      <!-- Contenedor Principal de la Escena Three.js con Canvas y HUD Overlay -->
+      <div class="view-3d-stage">
+        <div id="three-container" class="three-container"></div>
+
+        <!-- HUD Flotante: Métricas Hipocentrales -->
+        <div class="hud-3d-overlay">
+          <div class="hud-stat-pill">
+            <span class="hud-pill-label">Eventos 3D:</span>
+            <span id="hud-3d-count" class="hud-pill-val">1,082 sismos</span>
+          </div>
+          <div class="hud-stat-pill">
+            <span class="hud-pill-label">Columna Focal:</span>
+            <span class="hud-pill-val" style="color: #06b6d4;">130 - 175 km (Núcleo)</span>
+          </div>
+          <div class="hud-stat-pill">
+            <span class="hud-pill-label">Buzamiento Losa:</span>
+            <span class="hud-pill-val" style="color: #38bdf8;">~43° hacia el Este</span>
+          </div>
+        </div>
+
+        <!-- Leyenda Flotante de Profundidad 3D -->
+        <div class="depth-3d-legend">
+          <div class="depth-legend-title">Profundidad Hipocentral (km)</div>
+          <div class="depth-legend-item">
+            <span class="depth-dot" style="background:#f43f5e; box-shadow:0 0 8px #f43f5e;"></span>
+            <span>0 - 45 km (Cortical Superficial / Fallas)</span>
+          </div>
+          <div class="depth-legend-item">
+            <span class="depth-dot" style="background:#f59e0b; box-shadow:0 0 8px #f59e0b;"></span>
+            <span>45 - 120 km (Intermedia / Benioff Superior)</span>
+          </div>
+          <div class="depth-legend-item">
+            <span class="depth-dot" style="background:#06b6d4; box-shadow:0 0 10px #06b6d4;"></span>
+            <span style="font-weight:700; color:#38bdf8;">130 - 175 km (Núcleo Nido Los Santos)</span>
+          </div>
+          <div class="depth-legend-item">
+            <span class="depth-dot" style="background:#a855f7; box-shadow:0 0 8px #a855f7;"></span>
+            <span>> 175 km (Manto / Deshidratación)</span>
+          </div>
+        </div>
+
+        <!-- Tooltip 3D al interactuar con sismos -->
+        <div id="three-tooltip" class="three-tooltip hidden"></div>
+      </div>
+
+      <div class="modal-footer view-3d-footer">
+        <div class="view-3d-info-note">
+          <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <span><b>Navegación 3D:</b> Clic izquierdo + arrastrar para orbitar. Clic derecho para desplazar (pan). Rueda del ratón para hacer zoom hacia la columna focal.</span>
+        </div>
+        <button id="btn-close-3d-modal-footer" class="btn btn-secondary">Cerrar Visor 3D</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: Exportador de Ficha Técnica Municipal en PDF (1 Página para CMGRD) -->
+  <div id="modal-ficha-pdf" class="modal-backdrop hidden">
+    <div class="modal-card modal-card-pdf">
+      <div class="modal-header modal-header-pdf no-print">
+        <div class="modal-title-group">
+          <span class="modal-badge" style="color: #10b981;">Reporte Oficial CMGRD · Formato Ejecutivo</span>
+          <h3 class="modal-title">Ficha Técnica de Diagnóstico Sísmico Municipal</h3>
+          <p class="modal-subtitle">Documento estándar de 1 página para Comités Municipales de Gestión del Riesgo</p>
+        </div>
+        <div class="modal-header-actions">
+          <button id="btn-print-pdf" class="btn btn-primary" title="Imprimir o guardar directamente como PDF en 1 sola página">
+            <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            <span>🖨️ Imprimir / Guardar como PDF</span>
+          </button>
+          <button id="btn-close-pdf-modal" class="btn-close" aria-label="Cerrar ficha técnica">
+            <svg class="svg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Hoja Ejecutiva de Reporte Oficial (Estilo Carta 1 Página) -->
+      <div class="report-paper-wrapper">
+        <div id="report-paper-content" class="report-paper">
+          <!-- Inyectado dinámicamente según municipio seleccionado -->
+        </div>
+      </div>
+
+      <div class="modal-footer no-print">
+        <span style="font-size: 11px; color: var(--text-muted);">
+          ℹ️ Utilice la opción "Guardar como PDF" en el diálogo de impresión del navegador. Formato adaptado automáticamente a 1 página Carta/A4.
+        </span>
+        <button id="btn-close-pdf-modal-footer" class="btn btn-secondary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js & OrbitControls para Explorador 3D del Nido Sísmico (100% Offline) -->
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/OrbitControls.js"></script>
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   
   <!-- Custom JS Logic (Cache-busted) -->
-  <script src="app.js?v=20261013-16"></script>
+  <script src="app.js?v=20261013-18"></script>
 </body>
 </html>
