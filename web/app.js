@@ -2343,6 +2343,7 @@ function openMunicipalPdfReport(target) {
       <tr>
         <td style="width: 65%;">
           <div class="doc-logo-area">
+            <img src="logo.jpeg" alt="Logo GeoSismo" class="doc-brand-logo">
             <div class="doc-badge-shield">SGC</div>
             <div class="doc-header-text">
               <h2>República de Colombia · Departamento de Santander</h2>
